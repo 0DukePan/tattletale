@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Databases and local data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+/data/
+
+# Recorded fixtures that may contain private traffic
+fixtures/private/
+fixtures/raw/
+
+# Reports
+*.html
+!docs/**/*.html
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Env
+.env

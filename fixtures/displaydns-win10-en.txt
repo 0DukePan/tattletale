@@ -1,0 +1,361 @@
+﻿
+Windows IP Configuration
+
+    rr8---sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : rr8---sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 709
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr8.sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+
+
+    Record Name . . . . . : rr8.sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 709
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 41.201.164.20
+
+
+    202.43.168.192.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 202.43.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : host.docker.internal
+
+
+    Record Name . . . . . : 202.43.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : gateway.docker.internal
+
+
+    rr1---sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : rr1---sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 693
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr1.sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+
+
+    Record Name . . . . . : rr1.sn-5abxgpxuxaxjvh-5aby.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 693
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 41.201.164.13
+
+
+    rr1---sn-4g5ednre.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : rr1---sn-4g5ednre.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 412
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr1.sn-4g5ednre.googlevideo.com
+
+
+    Record Name . . . . . : rr1.sn-4g5ednre.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 412
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 173.194.6.166
+
+
+    1.0.0.127.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 1.0.0.127.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : kubernetes.docker.internal
+
+
+    i.ytimg.com
+    ----------------------------------------
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.148.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.145.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.146.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.178.41.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.149.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.147.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 142.251.144.6
+
+
+    Record Name . . . . . : i.ytimg.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.178.40.6
+
+
+    api.commandcode.ai
+    ----------------------------------------
+    Record Name . . . . . : api.commandcode.ai
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 104.26.8.108
+
+
+    Record Name . . . . . : api.commandcode.ai
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 172.67.69.147
+
+
+    Record Name . . . . . : api.commandcode.ai
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 104.26.9.108
+
+
+    desktop-i5es4jq.mshome.net
+    ----------------------------------------
+    No records of type AAAA
+
+
+    desktop-i5es4jq.mshome.net
+    ----------------------------------------
+    Record Name . . . . . : DESKTOP-I5ES4JQ.mshome.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.16.1
+
+
+    gateway.docker.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    gateway.docker.internal
+    ----------------------------------------
+    Record Name . . . . . : gateway.docker.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.43.202
+
+
+    rr5---sn-ajh5q5-5a.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : rr5---sn-ajh5q5-5a.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 1626
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr5.sn-ajh5q5-5a.googlevideo.com
+
+
+    Record Name . . . . . : rr5.sn-ajh5q5-5a.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 1626
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 173.194.129.117
+
+
+    release-assets.githubusercontent.com
+    ----------------------------------------
+    Record Name . . . . . : release-assets.githubusercontent.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 185.199.110.133
+
+
+    Record Name . . . . . : release-assets.githubusercontent.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 185.199.111.133
+
+
+    Record Name . . . . . : release-assets.githubusercontent.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 185.199.108.133
+
+
+    Record Name . . . . . : release-assets.githubusercontent.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 185.199.109.133
+
+
+    rr1---sn-ajh5q5-5o.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : rr1---sn-ajh5q5-5o.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 251
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr1.sn-ajh5q5-5o.googlevideo.com
+
+
+    Record Name . . . . . : rr1.sn-ajh5q5-5o.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 251
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 173.194.5.161
+
+
+    kubernetes.docker.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    kubernetes.docker.internal
+    ----------------------------------------
+    Record Name . . . . . : kubernetes.docker.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 127.0.0.1
+
+
+    1.16.168.192.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 1.16.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : DESKTOP-I5ES4JQ.mshome.net
+
+
+    msg.salesmartly.com
+    ----------------------------------------
+    Record Name . . . . . : msg.salesmartly.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : msg.salesmartly.com.cdn.cloudflare.net
+
+
+    Record Name . . . . . : msg.salesmartly.com.cdn.cloudflare.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 104.18.23.242
+
+
+    Record Name . . . . . : msg.salesmartly.com.cdn.cloudflare.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 104.18.22.242
+
+
+    r7---sn-5abxgpxuxaxjvh-5abd.googlevideo.com
+    ----------------------------------------
+    Record Name . . . . . : r7---sn-5abxgpxuxaxjvh-5abd.googlevideo.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 74
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : r7.sn-5abxgpxuxaxjvh-5abd.googlevideo.com
+
+
+    Record Name . . . . . : r7.sn-5abxgpxuxaxjvh-5abd.googlevideo.com
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 74
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 41.110.41.18
+
+
+    host.docker.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    host.docker.internal
+    ----------------------------------------
+    Record Name . . . . . : host.docker.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.43.202
+
+
