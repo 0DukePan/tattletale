@@ -25,12 +25,21 @@ try {
     throw "Could not reach the release page for $repo. Check the repository name and your connection."
 }
 
-$zipLine = ($sums -split "`n" | Where-Object { $_ -match '\.zip$' } | Select-Object -First 1)
+# `SHA256SUMS.txt` uses CRLF line endings. Splitting on "`n" alone leaves a
+# trailing carriage return on every line, which makes an anchored `\.zip$`
+# pattern match nothing at all — the installer then claims the release has no
+# asset. Trim each line before matching.
+$lines = ($sums -split "`r?`n") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+$zipLine = $lines | Where-Object { $_ -match '\.zip$' } | Select-Object -First 1
 if (-not $zipLine) { throw 'No zip asset found in the latest release.' }
 
-$parts = $zipLine.Trim() -split '\s+'
+# `<sha256>  <filename>`: split on the first run of whitespace only.
+$parts = $zipLine -split '\s+', 2
 $expected = $parts[0]
 $zipName = $parts[1]
+if (-not $expected -or -not $zipName) {
+    throw "Could not parse the checksum line: $zipLine"
+}
 Write-Host "  asset:      $zipName"
 
 $tmp = Join-Path $env:TEMP ("tattle-" + [guid]::NewGuid().ToString('n'))

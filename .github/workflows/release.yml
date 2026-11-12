@@ -8,12 +8,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
-env:
-  # Override rust-toolchain.toml, which pins the GNU host for local dev.
-  RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-msvc
-
 permissions:
   contents: write
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   build:
@@ -24,6 +23,11 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      # Set after installation, so it cannot affect the installer itself.
+      - name: Use the MSVC toolchain for this job
+        shell: bash
+        run: echo "RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-msvc" >> "$GITHUB_ENV"
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -41,14 +45,17 @@ jobs:
           Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
           $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name.zip" | Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
+          Get-Content "dist/SHA256SUMS.txt"
 
+      # `generate_release_notes` and `body` cannot both take effect: the action
+      # uses whichever it resolves last, so the curated install instructions were
+      # silently replacing the generated notes. Keep the instructions.
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.zip
             dist/SHA256SUMS.txt
-          generate_release_notes: true
           body: |
             ## Install
 
@@ -56,8 +63,8 @@ jobs:
             irm https://raw.githubusercontent.com/${{ github.repository }}/main/install.ps1 | iex
             ```
 
-            Or download the zip, verify it against `SHA256SUMS.txt`, and put
-            `tattle.exe` somewhere on your `PATH`.
+            Or download the zip below, verify it against `SHA256SUMS.txt`, and
+            put `tattle.exe` somewhere on your `PATH`.
 
             ## Verify it does not phone home
 

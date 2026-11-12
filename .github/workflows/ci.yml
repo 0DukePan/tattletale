@@ -8,9 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Override rust-toolchain.toml, which pins the GNU host for local dev.
-  RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-msvc
-  RUSTFLAGS: -D warnings
 
 jobs:
   test:
@@ -19,17 +16,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No RUSTUP_TOOLCHAIN in the workflow env: it would also apply to the
+      # toolchain installer below and make it resolve a toolchain it was not
+      # asked for. The override is set after installation instead.
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
+      # `rust-toolchain.toml` pins the GNU host so local builds work without
+      # Visual Studio Build Tools. CI has no MinGW, so it opts out here.
+      - name: Use the MSVC toolchain for this job
+        shell: bash
+        run: echo "RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-msvc" >> "$GITHUB_ENV"
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Show toolchain
+        run: rustc -vV
 
       - name: Format
         run: cargo fmt --all -- --check
 
+      # Warnings are denied here, for this crate only. A global RUSTFLAGS
+      # `-D warnings` would also deny warnings in dependencies, so any upstream
+      # crate adding one would break this build for a reason nobody here can fix.
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
