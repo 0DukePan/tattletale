@@ -1,0 +1,6 @@
+# Normalise line endings so a checkout on any platform produces the same bytes.
+* text=auto eol=lf
+
+# Fixtures are captured output: keep them byte-exact so the parser tests are
+# testing the parser and not the checkout.
+fixtures/* -text

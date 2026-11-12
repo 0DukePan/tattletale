@@ -201,10 +201,14 @@ pub struct Connection {
     pub ip: String,
     pub port: u16,
     pub proto: Proto,
-    /// Unix seconds of the first poll that saw this tuple.
+    /// Unix seconds of the first poll that ever saw this tuple.
     pub first_at: i64,
     /// Unix seconds of the most recent poll that saw this tuple.
     pub last_at: i64,
+    /// Unix seconds when this tuple most recently opened. Attribution must be
+    /// scored against this, not `first_at`: a client that reconnects every
+    /// minute was resolved again just before the latest open.
+    pub last_open_at: i64,
     /// How many times the tuple disappeared and came back. This is the number
     /// the receipt calls "connections".
     pub opens: u32,
