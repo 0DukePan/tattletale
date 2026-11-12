@@ -12,6 +12,7 @@
 //! * [`platform`] â€” the only OS-specific code (Windows collectors)
 
 pub mod classify;
+pub mod commands;
 pub mod demo;
 pub mod dns;
 pub mod health;
@@ -31,7 +32,7 @@ pub const PRODUCT: &str = "tattletale";
 
 /// Current unix time in seconds. Panics on a clock before 1970, which cannot
 /// happen on any machine this runs on and would be a bug elsewhere anyway.
-pub(crate) fn now_unix() -> i64 {
+pub fn now_unix() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)

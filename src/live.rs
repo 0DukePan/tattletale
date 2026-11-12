@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::commands::format::truncate;
 use crate::model::Tier;
 use crate::store::{AppRow, Store};
 use crate::watch::Watcher;
@@ -107,17 +108,6 @@ impl Frame {
         "write a receipt with `tattle report --open`, or see a full example with `tattle demo`"
             .to_string()
     }
-}
-
-/// Truncate to `width` characters, marking the cut so a clipped name is not
-/// mistaken for the real one.
-fn truncate(text: &str, width: usize) -> String {
-    if text.chars().count() <= width {
-        return text.to_string();
-    }
-    let mut out: String = text.chars().take(width.saturating_sub(1)).collect();
-    out.push('~');
-    out
 }
 
 /// Run the live view until Ctrl-C, or for a fixed time when not a terminal.
@@ -302,22 +292,6 @@ mod tests {
         assert!(text.contains("14 connections"));
         assert!(text.contains("3 flagged"));
         assert!(text.contains("71%"), "coverage should be shown: {text}");
-    }
-
-    #[test]
-    fn long_names_are_truncated_and_marked() {
-        let long = "a-very-long-application-name-that-will-not-fit.exe";
-        let text = truncate(long, 26);
-        assert_eq!(text.chars().count(), 26);
-        assert!(
-            text.ends_with('~'),
-            "a clipped name must be marked as clipped"
-        );
-    }
-
-    #[test]
-    fn short_names_are_untouched() {
-        assert_eq!(truncate("chrome.exe", 26), "chrome.exe");
     }
 
     #[test]
