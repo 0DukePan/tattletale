@@ -20,18 +20,30 @@ $latest = "https://github.com/$repo/releases/latest/download"
 $asset = 'SHA256SUMS.txt'
 
 try {
-    $sums = (Invoke-WebRequest -Uri "$latest/$asset" -UseBasicParsing).Content
+    $response = Invoke-WebRequest -Uri "$latest/$asset" -UseBasicParsing
 } catch {
     throw "Could not reach the release page for $repo. Check the repository name and your connection."
 }
 
+# GitHub serves release assets as `application/octet-stream`, so
+# `Invoke-WebRequest` hands back a byte array rather than a string. Splitting a
+# byte array silently coerces it to the literal text "System.Byte[]", the
+# checksum line is never found, and the installer reports that the release has
+# no asset. Decode explicitly.
+$sums = if ($response.Content -is [byte[]]) {
+    [System.Text.Encoding]::UTF8.GetString($response.Content)
+} else {
+    [string]$response.Content
+}
+
 # `SHA256SUMS.txt` uses CRLF line endings. Splitting on "`n" alone leaves a
 # trailing carriage return on every line, which makes an anchored `\.zip$`
-# pattern match nothing at all — the installer then claims the release has no
-# asset. Trim each line before matching.
+# pattern match nothing at all. Trim each line before matching.
 $lines = ($sums -split "`r?`n") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
 $zipLine = $lines | Where-Object { $_ -match '\.zip$' } | Select-Object -First 1
-if (-not $zipLine) { throw 'No zip asset found in the latest release.' }
+if (-not $zipLine) {
+    throw "No zip asset found in the latest release. The checksum file contained: $sums"
+}
 
 # `<sha256>  <filename>`: split on the first run of whitespace only.
 $parts = $zipLine -split '\s+', 2
