@@ -465,6 +465,29 @@ impl Store for SqliteStore {
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
+    fn events(&self, since: i64, limit: usize) -> anyhow::Result<Vec<crate::report::build::Event>> {
+        // One row per connection, not per attribution: a connection that had
+        // three candidate names is still one connection on the chart.
+        let mut stmt = self.conn.prepare(
+            "SELECT p.name, MIN(a.site), c.last_open_at, COALESCE(MAX(a.tier), 0)
+             FROM conn c
+             JOIN app p ON p.id = c.app_id
+             LEFT JOIN attribution a ON a.conn_id = c.id
+             WHERE c.last_at >= ?1
+             GROUP BY c.id
+             ORDER BY c.last_open_at
+             LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(rusqlite::params![since, limit as i64], |row| {
+            Ok(crate::report::build::Event {
+                app: row.get(0)?,
+                site: row.get::<_, Option<String>>(1)?,
+                at: row.get(2)?,
+                tier: Tier::from_int(row.get(3)?),
+            })
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
 }
 
 impl SqliteStore {

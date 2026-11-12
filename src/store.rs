@@ -1,4 +1,4 @@
-//! Persistence. SQLite in production, in-memory in tests.
+﻿//! Persistence. SQLite in production, in-memory in tests.
 //!
 //! The trait exists so the attribution engine and the report renderer can be
 //! tested against a fake store without creating files or depending on timing.
@@ -49,6 +49,10 @@ pub trait Store {
 
     /// Per-site rows for a time window, best first.
     fn site_rows(&self, since: i64, limit: usize) -> anyhow::Result<Vec<SiteRow>>;
+
+    /// Individual connections in a window, oldest first, for time-based
+    /// aggregation (the hourly chart, the night summary).
+    fn events(&self, since: i64, limit: usize) -> anyhow::Result<Vec<crate::report::build::Event>>;
 }
 
 /// Headline numbers for a time window.

@@ -1,0 +1,328 @@
+/* The receipt stylesheet.
+ *
+ * Design constraints, in priority order:
+ *  1. Readable in a screenshot at 1200 px without zooming.
+ *  2. Printable on A4 in two pages, black on white, no background ink.
+ *  3. Degrades to plain text: every value is in the markup, not in an image.
+ *
+ * No external fonts, no web fonts, no @import. The system stack keeps the file
+ * self-contained, which is the whole point of a single-file receipt.
+ */
+
+:root {
+  --bg: #0b0c0e;
+  --surface: #141619;
+  --surface-2: #1b1e22;
+  --text: #e6e8eb;
+  --muted: #8b9199;
+  --line: #23272d;
+  --accent: #f0b429;
+  --danger: #e5484d;
+  --ok: #46a758;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 40px 24px 64px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.receipt {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.masthead .meta {
+  display: flex;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- headline numbers ---------- */
+
+.headline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 28px 0;
+}
+
+.stat {
+  background: var(--surface);
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat b {
+  font-family: var(--mono);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.stat span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.stat.flagged b { color: var(--danger); }
+
+/* ---------- sections ---------- */
+
+section { margin: 36px 0; }
+
+h2 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.night p { margin: 0; font-size: 15px; }
+.night b { font-family: var(--mono); font-size: 17px; }
+
+/* ---------- chart ---------- */
+
+.chart svg {
+  width: 100%;
+  height: 96px;
+  display: block;
+}
+
+.bar { fill: var(--muted); opacity: 0.55; }
+.bar.night { fill: var(--accent); opacity: 0.9; }
+.bar:hover { opacity: 1; }
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ---------- tables ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+th.num, td.num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+td.flagged { color: var(--danger); }
+
+.app { font-weight: 500; }
+
+.tier {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 8px;
+  letter-spacing: -1px;
+}
+
+/* ---------- cards ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.card .sub {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 2px 0 12px;
+}
+
+.sites { list-style: none; margin: 0; padding: 0; }
+
+.sites li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.sites .site {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sites .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.chip {
+  font-family: var(--sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+.chip.tracker, .chip.ads { color: var(--danger); }
+.chip.analytics { color: var(--accent); }
+
+.muted { color: var(--muted); font-size: 13px; }
+
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty h2 { color: var(--text); }
+.empty code {
+  font-family: var(--mono);
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ---------- footer ---------- */
+
+footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 12px;
+}
+
+.legend b { color: var(--text); font-weight: 600; }
+
+.caveat {
+  color: var(--accent);
+  margin: 6px 0;
+}
+
+.privacy { margin: 10px 0 0; }
+
+/* ---------- print ---------- */
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --text: #111111;
+    --muted: #555555;
+    --line: #d4d4d8;
+    --accent: #8a5a00;
+    --danger: #b42318;
+  }
+
+  body { padding: 0; font-size: 11pt; }
+
+  .receipt { max-width: none; }
+
+  .grid { grid-template-columns: repeat(2, 1fr); }
+
+  section { margin: 18pt 0; break-inside: avoid; }
+
+  .chart svg { height: 60pt; }
+
+  footer { font-size: 9pt; }
+
+  /* Never split a card or a table row across pages. */
+  .card, tr { break-inside: avoid; }
+}
+
+@media (max-width: 640px) {
+  .headline { grid-template-columns: repeat(2, 1fr); }
+  .stat b { font-size: 26px; }
+}

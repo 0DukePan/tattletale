@@ -325,6 +325,34 @@ impl Store for MemoryStore {
         rows.truncate(limit);
         Ok(rows)
     }
+    fn events(&self, since: i64, limit: usize) -> anyhow::Result<Vec<crate::report::build::Event>> {
+        let app_names: std::collections::HashMap<i64, String> =
+            self.apps.values().map(|a| (a.id, a.name.clone())).collect();
+
+        let mut out: Vec<crate::report::build::Event> = self
+            .conns
+            .values()
+            .filter(|c| c.last_at >= since)
+            .map(|conn| crate::report::build::Event {
+                app: app_names.get(&conn.app_id).cloned().unwrap_or_default(),
+                site: self
+                    .attributions
+                    .get(&conn.id)
+                    .and_then(|rows| rows.first())
+                    .map(|(host, _)| site_of(host)),
+                at: conn.last_open_at,
+                tier: self
+                    .attributions
+                    .get(&conn.id)
+                    .and_then(|rows| rows.first())
+                    .map(|(_, tier)| *tier)
+                    .unwrap_or(Tier::Unknown),
+            })
+            .collect();
+        out.sort_by_key(|e| e.at);
+        out.truncate(limit);
+        Ok(out)
+    }
 }
 
 impl MemoryStore {
