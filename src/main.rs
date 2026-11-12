@@ -27,6 +27,10 @@ struct Cli {
     #[arg(long, global = true)]
     no_color: bool,
 
+    /// Emit JSON on stdout instead of a table. Logs still go to stderr.
+    #[arg(long, global = true)]
+    json: bool,
+
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -76,8 +80,46 @@ enum Command {
         action: ListsAction,
     },
 
+    /// Print the busiest applications, sites or domains.
+    Top {
+        /// Window to cover, e.g. `24h`, `7d`.
+        #[arg(long, default_value = "24h")]
+        since: String,
+
+        /// What to rank by.
+        #[arg(long, value_enum, default_value = "apps")]
+        by: RankBy,
+
+        /// How many rows to print.
+        #[arg(long, default_value = "10")]
+        limit: usize,
+    },
+
+    /// Show one application's traffic.
+    App {
+        /// Part of the executable name, case-insensitive.
+        name: String,
+
+        /// Window to cover.
+        #[arg(long, default_value = "24h")]
+        since: String,
+    },
+
+    /// Delete everything this tool has recorded.
+    Purge {
+        /// Skip the confirmation prompt.
+        #[arg(long)]
+        yes: bool,
+    },
     /// Print the environment and check that collection can work here.
     Doctor,
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+enum RankBy {
+    Apps,
+    Sites,
+    Domains,
 }
 
 #[derive(Debug, Subcommand)]
@@ -102,9 +144,7 @@ fn main() -> ExitCode {
 fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        None => {
-            anyhow::bail!("live view is not wired up yet; try `tattle report` or `tattle doctor`")
-        }
+        None => live(&cli),
         Some(Command::Report {
             ref since,
             ref out,
@@ -113,11 +153,247 @@ fn run() -> anyhow::Result<()> {
         Some(Command::Watch { ref duration }) => watch(&cli, duration),
         Some(Command::Demo { ref out, open }) => demo(&cli, out.as_ref(), open),
         Some(Command::Lists { ref action }) => lists(action),
+        Some(Command::Top {
+            ref since,
+            by,
+            limit,
+        }) => top(&cli, since, by, limit),
+        Some(Command::App {
+            ref name,
+            ref since,
+        }) => app(&cli, name, since),
+        Some(Command::Purge { yes }) => purge(&cli, yes),
         Some(Command::Doctor) => {
             doctor(&cli);
             Ok(())
         }
     }
+}
+
+/// Open the store for a read-only command, with a clear error when there is
+/// nothing recorded yet instead of an empty table that says nothing.
+fn open_store(cli: &Cli) -> anyhow::Result<SqliteStore> {
+    let db = cli.db.clone().unwrap_or_else(default_db_path);
+    if !db.exists() {
+        anyhow::bail!(
+            "nothing recorded yet ({} does not exist).\n  run `tattle watch --duration 10m`, or `tattle demo` to see an example",
+            db.display()
+        );
+    }
+    SqliteStore::open(&db)
+}
+
+/// Print a ranked table in the terminal. This exists because most people will
+/// never open the HTML receipt, and a one-screen answer is often enough.
+fn top(cli: &Cli, since: &str, by: RankBy, limit: usize) -> anyhow::Result<()> {
+    let window = parse_window(since)?;
+    let now = unix_now();
+    let store = open_store(cli)?;
+
+    let classifier =
+        tattletale::classify::Classifier::load(Some(&tattletale::classify::lists_dir()));
+
+    match by {
+        RankBy::Apps => {
+            let rows = store.app_rows(now - window, limit)?;
+            if cli.json {
+                let payload: Vec<_> = rows
+                    .iter()
+                    .map(|r| {
+                        serde_json::json!({
+                            "app": r.app.display(),
+                            "path": r.app.path,
+                            "connections": r.connections,
+                            "sites": r.sites,
+                            "flagged": r.tracked,
+                            "confidence": r.tier.label(),
+                        })
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+                return Ok(());
+            }
+            if rows.is_empty() {
+                println!("nothing recorded in the last {since}");
+                return Ok(());
+            }
+            println!(
+                "{:<28} {:>7} {:>7} {:>9}",
+                "APP", "CONNS", "SITES", "FLAGGED"
+            );
+            for row in rows {
+                let flagged = if row.tracked > 0 {
+                    format!("{} !", row.tracked)
+                } else {
+                    row.tracked.to_string()
+                };
+                println!(
+                    "{:<28} {:>7} {:>7} {:>9}",
+                    truncate(row.app.display(), 28),
+                    row.connections,
+                    row.sites,
+                    flagged
+                );
+            }
+        }
+        RankBy::Sites => {
+            let rows = store.site_rows(now - window, limit)?;
+            if cli.json {
+                let payload: Vec<_> = rows
+                    .iter()
+                    .map(|r| {
+                        serde_json::json!({
+                            "site": r.site,
+                            "host": r.host,
+                            "connections": r.connections,
+                            "category": classifier.classify(&r.host).as_str(),
+                            "confidence": r.tier.label(),
+                        })
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+                return Ok(());
+            }
+            println!("{:<40} {:>7}  VERDICT", "SITE", "CONNS");
+            for row in rows {
+                let verdict = match classifier.classify(&row.host) {
+                    tattletale::model::Category::Unknown => String::new(),
+                    other => other.as_str().to_string(),
+                };
+                println!(
+                    "{:<40} {:>7}  {}",
+                    truncate(&row.site, 40),
+                    row.connections,
+                    verdict
+                );
+            }
+        }
+        RankBy::Domains => {
+            // Host-level view: shows the exact hostname behind a site.
+            let rows = store.site_rows(now - window, limit * 4)?;
+            println!("{:<52} {:>7}  VERDICT", "DOMAIN", "CONNS");
+            for row in rows.into_iter().take(limit) {
+                let verdict = match classifier.classify(&row.host) {
+                    tattletale::model::Category::Unknown => String::new(),
+                    other => other.as_str().to_string(),
+                };
+                println!(
+                    "{:<52} {:>7}  {}",
+                    truncate(&row.host, 52),
+                    row.connections,
+                    verdict
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn truncate(text: &str, width: usize) -> String {
+    if text.chars().count() <= width {
+        return text.to_string();
+    }
+    let mut out: String = text.chars().take(width.saturating_sub(1)).collect();
+    out.push('~');
+    out
+}
+
+/// Everything one application did, by site.
+fn app(cli: &Cli, name: &str, since: &str) -> anyhow::Result<()> {
+    let window = parse_window(since)?;
+    let now = unix_now();
+    let store = open_store(cli)?;
+    let needle = name.to_ascii_lowercase();
+
+    let rows = store.app_rows(now - window, 100)?;
+    let matching: Vec<_> = rows
+        .into_iter()
+        .filter(|r| r.app.display().to_ascii_lowercase().contains(&needle))
+        .collect();
+
+    if matching.is_empty() {
+        anyhow::bail!("no recorded application matches {name:?} in the last {since}");
+    }
+
+    let classifier =
+        tattletale::classify::Classifier::load(Some(&tattletale::classify::lists_dir()));
+
+    for row in matching {
+        println!(
+            "\n{}  ({} connections, {} sites, {} flagged)\n",
+            row.app.display(),
+            row.connections,
+            row.sites,
+            row.tracked
+        );
+        println!("  {:<10} {:<40} {:>6}  VERDICT", "CONF", "SITE", "CONNS");
+        for site in &row.top_sites {
+            let verdict = match classifier.classify(&site.host) {
+                tattletale::model::Category::Unknown => String::new(),
+                other => other.as_str().to_string(),
+            };
+            println!(
+                "  {:<10} {:<40} {:>6}  {}",
+                site.tier.glyph(),
+                truncate(&site.site, 40),
+                site.connections,
+                verdict
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Delete the database and every downloaded list.
+///
+/// A privacy tool that records your traffic must have an obvious way to stop
+/// recording it and forget. The confirmation exists because the data cannot be
+/// recovered, not because deleting is discouraged.
+fn purge(cli: &Cli, yes: bool) -> anyhow::Result<()> {
+    let db = cli.db.clone().unwrap_or_else(default_db_path);
+    let lists = tattletale::classify::lists_dir();
+
+    if !yes {
+        println!("this deletes:");
+        for path in [&db, &lists] {
+            if path.exists() {
+                println!("  {}", path.display());
+            }
+        }
+        print!("continue? [y/N] ");
+        std::io::Write::flush(&mut std::io::stdout())?;
+
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer)?;
+        if !answer.trim().eq_ignore_ascii_case("y") {
+            println!("nothing deleted");
+            return Ok(());
+        }
+    }
+
+    let mut removed = 0;
+    // The WAL and shared-memory files must go with the database, or the next
+    // run can recover deleted rows from them.
+    let mut targets = vec![db.clone()];
+    for suffix in ["-wal", "-shm"] {
+        targets.push(std::path::PathBuf::from(format!(
+            "{}{suffix}",
+            db.display()
+        )));
+    }
+    for path in targets {
+        if path.exists() {
+            std::fs::remove_file(&path)?;
+            removed += 1;
+        }
+    }
+    if lists.exists() {
+        std::fs::remove_dir_all(&lists)?;
+        removed += 1;
+    }
+
+    println!("deleted {removed} item(s); nothing recorded remains");
+    Ok(())
 }
 
 fn lists(action: &ListsAction) -> anyhow::Result<()> {
@@ -277,6 +553,16 @@ fn report(
     }
     std::fs::write(&path, html)?;
 
+    if model.totals.connections == 0 {
+        println!("receipt written to {}", path.display());
+        println!("  nothing recorded in the last {since}");
+        println!("\n  record something first:");
+        println!("    tattle watch --duration 10m   then  tattle report --open");
+        println!("  or see what a receipt looks like:");
+        println!("    tattle demo --open");
+        return Ok(());
+    }
+
     println!("receipt written to {}", path.display());
     println!(
         "  {} connections  |  {} apps  |  {} sites  |  {:.0}% flagged",
@@ -289,6 +575,21 @@ fn report(
     if open {
         open_path(&path);
     }
+    Ok(())
+}
+
+/// The default command: show live traffic, then point at the receipt.
+fn live(cli: &Cli) -> anyhow::Result<()> {
+    let db = cli.db.clone().unwrap_or_else(default_db_path);
+    if let Some(parent) = db.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let store = SqliteStore::open(&db)?;
+    let watcher = tattletale::watch::Watcher::new(store);
+    let frame = tattletale::live::run(watcher)?;
+
+    println!("\n  {}\n", frame.closing_hint());
     Ok(())
 }
 

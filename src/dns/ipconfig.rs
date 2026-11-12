@@ -377,14 +377,22 @@ Windows IP Configuration
     ----------------------------------------
     Nom d'enregistrement  : exemple.fr
     Type d'enregistrement : 1
-    DurÃ©e de vie  . . . . : 120
-    Section . . . . . . . : RÃ©ponse
+    Durée de vie  . . . . : 120
+    Section . . . . . . . : Réponse
     Enregistrement A  . . : 93.184.216.34
 "#;
         let records = parse_at(text, 0);
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].host, "exemple.fr");
         assert_eq!(records[0].ip, "93.184.216.34");
+        // The TTL lives behind a localised label. Asserting it is the whole
+        // point: an earlier version of this fixture was double-encoded, so
+        // "Durée" never matched and the TTL was silently 0 while the test
+        // still passed on host and address.
+        assert_eq!(
+            records[0].ttl, 120,
+            "the localised TTL label must be recognised"
+        );
     }
 
     #[test]

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Override rust-toolchain.toml, which pins the GNU host for local dev.
+  RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-msvc
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: fmt, clippy, test (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      # The live tests are #[ignore]d: they open real sockets and need a few
+      # seconds of wall clock, which is not something CI should depend on.
+      - name: Test
+        run: cargo test --all
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Report binary size
+        shell: pwsh
+        run: |
+          $exe = Get-Item target/release/tattle.exe
+          "{0:N2} MB" -f ($exe.Length / 1MB)

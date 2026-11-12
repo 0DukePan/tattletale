@@ -1,4 +1,10 @@
 [toolchain]
+# The GNU host triple is pinned because this project is developed on a machine
+# with no Visual Studio Build Tools: local builds link with WinLibs MinGW.
+#
+# CI overrides this with RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-msvc and
+# builds the released artifacts with MSVC, so a published binary never depends
+# on the maintainer's MinGW setup.
 channel = "stable-x86_64-pc-windows-gnu"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

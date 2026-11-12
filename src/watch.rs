@@ -24,6 +24,10 @@ pub struct Watcher<S: Store> {
     collector: crate::platform::windows::Collector,
     dns: CacheTracker,
     last_dns_poll: Option<Instant>,
+    /// Ticks since the last retention sweep. Pruning runs on a timer inside the
+    /// loop, not only at shutdown: a session that is interrupted or that runs
+    /// for hours would otherwise never prune at all.
+    ticks_since_prune: u64,
 }
 
 impl<S: Store> Watcher<S> {
@@ -33,6 +37,7 @@ impl<S: Store> Watcher<S> {
             collector: crate::platform::windows::Collector::new(),
             dns: CacheTracker::new(),
             last_dns_poll: None,
+            ticks_since_prune: 0,
         }
     }
 
@@ -72,6 +77,13 @@ impl<S: Store> Watcher<S> {
                 .filter(|d| d.tier > crate::model::Tier::Unknown)
                 .count();
             self.store.save_attributions(&decisions)?;
+        }
+
+        // Roughly every ten minutes at the one-second poll cadence.
+        self.ticks_since_prune += 1;
+        if self.ticks_since_prune >= 600 {
+            self.ticks_since_prune = 0;
+            self.store.prune(now)?;
         }
 
         Ok(stats)

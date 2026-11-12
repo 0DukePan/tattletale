@@ -5,83 +5,68 @@
 **Your apps are talking behind your back. Here are the receipts.**
 
 A single Windows binary that shows which application contacted which company,
-when, and how often — and writes it up as one HTML receipt you can keep,
+when, and how often — then writes it up as one HTML receipt you can keep,
 print, or post.
 
-No account. No cloud. No packet capture. No admin prompt.
+[![CI](https://github.com/OWNER/tattletale/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/tattletale/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)](#)
 
-<sub>Windows 10/11 · MIT · written in Rust</sub>
+<img src=".github/assets/demo.png" alt="A tattletale receipt: 39 connections, 8 apps, 44% flagged, with red ADS chips on doubleclick.net and amber ANALYTICS chips on google-analytics.com" width="820">
+
+<sub>The receipt, rendered by <code>tattle demo</code>. The banner in the image is part of the
+output: synthetic data is always labelled as synthetic.</sub>
 
 </div>
 
 ---
 
-## What it looks like
-
-```
-$ tattle report
-
-  receipt written to receipt.html
-  13 connections | 5 apps | 2 sites | 0% flagged | 15% named
-```
-
-```text
-  APP                     CONNS   SITES   FLAGGED
-  brave.exe                   6       1         0
-  DeepSeek Harness.exe        2       1         0
-  Discord.exe                 2       0         0
-  NVIDIA Overlay.exe          2       0         0
-```
-
-The receipt is a single self-contained HTML file: headline numbers, a
-connections-by-hour chart, top talkers, per-app cards, and a legend that says
-how sure each attribution is. It opens from a USB stick with no network and
-prints on A4.
-
-## Why
-
-Every app on your computer contacts dozens of domains you never asked for.
-You can see your *bandwidth* anywhere; seeing the *pattern* — which app, which
-company, how often — is nearly impossible without commercial software that
-phones home itself.
-
-`tattle` reads the connection and DNS metadata Windows already keeps. It does
-not capture packets, does not intercept TLS, and does not send anything
-anywhere.
-
 ## Install
 
-Build from source (v0.1 has no packaged release yet):
-
 ```powershell
-git clone https://github.com/tattletale/tattletale
-cd tattletale
-cargo build --release
-.\target\release\tattle.exe doctor
+irm https://raw.githubusercontent.com/OWNER/tattletale/main/install.ps1 | iex
 ```
 
-Requires [Rust](https://rustup.rs). On Windows without Visual Studio Build
-Tools, use the GNU toolchain (`rust-toolchain.toml` pins it) and install
-[WinLibs](https://winlibs.com) MinGW.
+Or download the zip from [Releases](https://github.com/OWNER/tattletale/releases),
+check it against `SHA256SUMS.txt`, and put `tattle.exe` on your `PATH`.
+
+No account. No cloud. No packet capture. No admin prompt.
 
 ## Use
 
 ```powershell
-tattle doctor              # can this machine be measured?
-tattle watch --duration 10m   # record traffic
-tattle report --since 24h     # write receipt.html
-tattle report --open          # ...and open it
+tattle                      # live view, until Ctrl-C
+tattle report --open        # write a receipt and open it
+tattle demo                 # see a labelled example first
 ```
 
 | Command | What it does |
 |---|---|
-| `tattle doctor` | Checks the collector, the interface list, and the DNS source |
-| `tattle watch --duration 10m` | Records into the local database |
-| `tattle report --since 24h` | Writes a single-file HTML receipt |
-| `tattle demo` | Renders a labelled synthetic scene, for a look before recording |
-| `tattle lists update` | Downloads public tracker lists (the only outbound request) |
-| `tattle lists status` | Shows how many rules are loaded and where they came from |
-| `tattle --db <path>` | Uses a different database file |
+| `tattle` | Live table of what is talking right now |
+| `tattle report --since 24h --open` | Write and open an HTML receipt |
+| `tattle watch --duration 10m` | Record for a fixed time |
+| `tattle top --since 24h --by sites` | Rank sites, apps or domains in the terminal |
+| `tattle app chrome` | One application's traffic, by site |
+| `tattle demo` | A labelled synthetic day, for a look before recording |
+| `tattle lists update` | Download public tracker lists (the only outbound request) |
+| `tattle doctor` | Check whether this machine can be measured |
+| `tattle purge` | Delete everything it has recorded |
+| `tattle top --json` | The same data, for scripts |
+
+## What it actually does
+
+Every app contacts dozens of domains you never asked for. You can see your
+*bandwidth* anywhere; seeing the *pattern* — which app, which company, how often
+— is nearly impossible without commercial software that phones home itself.
+
+`tattle` reads the connection and DNS metadata Windows already keeps:
+
+| Source | What it gives | Cost |
+|---|---|---|
+| `GetExtendedTcpTable` | every TCP connection and its owning process | ~0.6 ms per poll |
+| `ipconfig /displaydns` | name → address pairs the resolver holds | ~40 ms, every 3 s |
+
+No packet capture. No TLS interception. No kernel driver. No service.
 
 ## How sure is it?
 
@@ -90,22 +75,26 @@ Every attribution carries a tier, and the tier is always shown:
 | Tier | Meaning |
 |---|---|
 | ●●● Exact | The DNS event named the requesting process. Requires admin; **never produced in v0.1**. |
-| ●●○ High | Exactly one name resolved in the 90-second window before the connection. |
+| ●●○ High | Exactly one name resolved in the 90 seconds before the connection. |
 | ●○○ Probable | Several names, or the address is shared between apps. |
 | ○○○ Unknown | No name resolved. The address is shown, and no guess is made. |
 
-**The tool would rather say "unknown" than invent a name.** Full rules, the
-window, and the exclusions are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+**It would rather say "unknown" than invent a name.** The full rules, the
+window, and every exclusion are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## The known blind spot
 
 Browsers using DNS over HTTPS resolve names inside their own process. Those
-lookups never reach the Windows resolver cache, so their connections appear as
-bare addresses. This is not hidden: the receipt reports what fraction of
-connections could be named, and names the applications hiding their lookups.
+lookups never reach the Windows resolver cache, so their connections arrive as
+bare addresses.
 
-On the development machine, that number was **15%**. That is the honest figure,
-and it is why the tool does not claim to show everything.
+The tool does not hide this. The receipt reports what fraction of connections it
+could name, next to the headline numbers, and names the applications that are
+bypassing the system resolver.
+
+On the machine this was built on, that figure was **15%**. That is the honest
+number, and it is why the demo scene exists: so the tool can be judged on what
+it shows rather than on what a particular machine happened to browse.
 
 Recovering browser lookups is the first item in v0.1.1.
 
@@ -113,22 +102,37 @@ Recovering browser lookups is the first item in v0.1.1.
 
 - **No packet capture, no TLS interception, no SNI inspection.** Metadata only.
 - **No cloud, no telemetry, no update check.** The binary makes no outbound
-  connections.
-- **No kernel driver, no admin prompt.** It works as a standard user.
+  connections. `tests/privacy.rs` fails the build if that changes.
+- **No kernel driver, no admin prompt.** It runs as a standard user.
 - **No accusations.** It reports what a *domain* is on a public list and how
   often it was contacted. It does not label software as spyware.
 - **No macOS or Linux yet.** The engine is portable; the collectors are not.
 
 ## Status
 
-Working: the collector, the DNS parser, the attribution engine, the two stores,
-the receipt renderer, tracker lists, and a labelled demo mode.
-Not yet built: the live TUI and packaged releases.
+Working: collector, DNS parser, attribution engine, SQLite and in-memory stores,
+HTML receipt, live view, tracker lists, demo mode, purge.
 
-- 87 tests, `clippy -D warnings` clean
+- 106 tests; `cargo clippy --all-targets -- -D warnings` clean
 - Verified against a live Windows 10 machine, not only against fixtures
-- 72,999 tracker rules load from OISD and EasyList; the bundled seed works offline
+- 72,999 tracker rules from OISD and EasyList; a 110-rule seed works offline
 - [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — how attribution works and where it fails
+- [SECURITY.md](SECURITY.md) — exactly what it reads and what it sends
+- [CONTRIBUTING.md](CONTRIBUTING.md) — build setup and the house rules
+
+## Build from source
+
+```powershell
+git clone https://github.com/OWNER/tattletale
+cd tattletale
+cargo build --release
+.\target\release\tattle.exe doctor
+```
+
+Requires [Rust](https://rustup.rs). This project is developed on a machine with
+no Visual Studio Build Tools, so the local toolchain is GNU with
+[WinLibs](https://winlibs.com) MinGW; CI builds the released binaries with MSVC.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

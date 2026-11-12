@@ -1,0 +1,71 @@
+name: Bug report
+description: Something is wrong, missing, or attributed to the wrong application
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Wrong attribution is the most serious bug this project can have — more
+        than a crash. If the tool named the wrong application, say so in the
+        title.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. tattle watch --duration 60s
+        2. open <application>
+        3. tattle report --open
+        4. the row for <app> says <domain>
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `tattle --version`
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows build
+      description: Output of `winver`, e.g. Windows 10 22H2 build 19045
+    validations:
+      required: true
+
+  - type: dropdown
+    id: elevated
+    attributes:
+      label: Was the shell elevated?
+      options:
+        - "No (standard user)"
+        - "Yes (administrator)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `tattle doctor`
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: locale
+    attributes:
+      label: If the domain column is empty or wrong
+      options:
+        - label: Windows is set to a language other than English

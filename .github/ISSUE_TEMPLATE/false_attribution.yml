@@ -1,0 +1,66 @@
+name: False attribution
+description: The tool named the wrong application for a connection
+labels: ["bug", "attribution"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the highest-severity bug class in the project. A privacy tool
+        that blames the wrong application is worse than one that says nothing,
+        so thank you for taking the time.
+
+        If you can share the `tattle --json` rows for the affected connection,
+        that is the whole reproduction.
+
+  - type: input
+    id: app_named
+    attributes:
+      label: Application the tool named
+      placeholder: slack.exe
+    validations:
+      required: true
+
+  - type: input
+    id: app_actual
+    attributes:
+      label: Application you believe it actually was
+      placeholder: chrome.exe, or "I do not know"
+    validations:
+      required: true
+
+  - type: input
+    id: domain
+    attributes:
+      label: Domain or address shown
+      placeholder: doubleclick.net (or 142.250.191.102)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Confidence shown
+      options:
+        - "●●● exact"
+        - "●●○ high"
+        - "●○○ probable"
+        - "○○○ unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Anything that helps
+      description: |
+        A screenshot of the receipt row, the relevant `tattle --json` output,
+        or the output of `nslookup <domain>` and `ipconfig /displaydns | findstr /C:"<address>"`
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `tattle --version`
+    validations:
+      required: true

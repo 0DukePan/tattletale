@@ -15,6 +15,7 @@ pub mod classify;
 pub mod demo;
 pub mod dns;
 pub mod health;
+pub mod live;
 pub mod model;
 pub mod platform;
 pub mod report;
@@ -25,5 +26,14 @@ pub mod watch;
 /// Crate version, surfaced in the HTML receipt footer and in `tattle doctor`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Name shown in reports and the TUI header.
+/// Name shown in reports and the live view header.
 pub const PRODUCT: &str = "tattletale";
+
+/// Current unix time in seconds. Panics on a clock before 1970, which cannot
+/// happen on any machine this runs on and would be a bug elsewhere anyway.
+pub(crate) fn now_unix() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}

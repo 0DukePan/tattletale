@@ -1,0 +1,71 @@
+name: Release
+
+# Tagging is the release trigger. Every artifact is built by CI with the MSVC
+# toolchain, so a released binary never depends on the maintainer's local
+# MinGW setup.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  # Override rust-toolchain.toml, which pins the GNU host for local dev.
+  RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-msvc
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Stage artifact
+        shell: pwsh
+        run: |
+          $name = "tattle-${{ github.ref_name }}-x86_64-pc-windows-msvc"
+          New-Item -ItemType Directory -Force -Path "dist/$name" | Out-Null
+          Copy-Item target/release/tattle.exe "dist/$name/"
+          Copy-Item README.md, LICENSE "dist/$name/"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
+          $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name.zip" | Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ```powershell
+            irm https://raw.githubusercontent.com/${{ github.repository }}/main/install.ps1 | iex
+            ```
+
+            Or download the zip, verify it against `SHA256SUMS.txt`, and put
+            `tattle.exe` somewhere on your `PATH`.
+
+            ## Verify it does not phone home
+
+            ```powershell
+            tattle doctor
+            tattle watch --duration 60s
+            tattle report --since 1h --open
+            ```
+
+            The binary makes no outbound connections. The only network code in
+            the product is `tattle lists update`, which you have to ask for.
