@@ -111,7 +111,12 @@ impl Frame {
 }
 
 /// Run the live view until Ctrl-C, or for a fixed time when not a terminal.
-pub fn run<S: Store + 'static>(mut watcher: Watcher<S>) -> anyhow::Result<Frame> {
+pub fn run<S, C, N>(mut watcher: Watcher<S, C, N>) -> anyhow::Result<Frame>
+where
+    S: Store + 'static,
+    C: crate::watch::ConnectionSource,
+    N: crate::watch::NameSource,
+{
     let interactive = std::io::stdout().is_terminal();
 
     let running = Arc::new(AtomicBool::new(true));
@@ -189,7 +194,16 @@ pub fn run<S: Store + 'static>(mut watcher: Watcher<S>) -> anyhow::Result<Frame>
 }
 
 /// Read the current numbers out of the store.
-fn snapshot<S: Store>(watcher: &Watcher<S>, elapsed: Duration, now: i64) -> anyhow::Result<Frame> {
+fn snapshot<S, C, N>(
+    watcher: &Watcher<S, C, N>,
+    elapsed: Duration,
+    now: i64,
+) -> anyhow::Result<Frame>
+where
+    S: Store,
+    C: crate::watch::ConnectionSource,
+    N: crate::watch::NameSource,
+{
     let store = watcher.store();
     let apps = store.app_rows(now - WINDOW_SECONDS, MAX_ROWS)?;
     let totals = store.totals(now - WINDOW_SECONDS)?;

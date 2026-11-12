@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::commands::{format::parse_window, paths};
 use crate::store::sqlite::SqliteStore;
-use crate::watch::{TickStats, Watcher};
+use crate::watch::{OncePerSecond, TickStats, Watcher};
 
 /// Record for `duration`, then print what was seen.
 pub fn run(
@@ -35,13 +35,17 @@ pub fn run(
     let mut peak_connections = 0usize;
     let mut last_names = 0usize;
 
-    watcher.run(std::time::Duration::from_secs(span as u64), |stats| {
-        total.resolved += stats.resolved;
-        peak_connections = peak_connections.max(stats.connections);
-        if stats.names > 0 {
-            last_names = stats.names;
-        }
-    })?;
+    watcher.run(
+        std::time::Duration::from_secs(span as u64),
+        &mut OncePerSecond,
+        |stats| {
+            total.resolved += stats.resolved;
+            peak_connections = peak_connections.max(stats.connections);
+            if stats.names > 0 {
+                last_names = stats.names;
+            }
+        },
+    )?;
     watcher.finish(crate::now_unix())?;
 
     writeln!(
