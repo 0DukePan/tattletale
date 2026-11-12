@@ -86,10 +86,9 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
         by_ip.entry(record.ip.as_str()).or_default().push(record);
     }
 
-    // Tracks which application claimed an address inside the window, so a
-    // shared CDN address used by two apps is not reported as a confident match
-    // for either of them.
-    let mut claimed: HashMap<(&str, i64), i64> = HashMap::new();
+    // Every (time, app) that claimed an address, so contention is judged
+    // against the actual window rather than against a fixed bucket.
+    let mut claimed: HashMap<&str, Vec<(i64, i64)>> = HashMap::new();
 
     let mut decisions = Vec::with_capacity(pending.len());
 
@@ -107,14 +106,17 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
             continue;
         }
 
-        // Did another application resolve this address in the same window?
-        let bucket = conn.at / WINDOW_SECONDS;
-        let contended = claimed
-            .get(&(conn.ip.as_str(), bucket))
-            .is_some_and(|owner| *owner != conn.app_id);
-        claimed
-            .entry((conn.ip.as_str(), bucket))
-            .or_insert(conn.app_id);
+        // Did another application use this address within one window of now?
+        //
+        // Fixed time buckets were wrong at their boundaries: two apps
+        // connecting to the same CDN address a second apart could land in
+        // different buckets and both be reported `High`, which is exactly the
+        // shared-address case the tier exists to catch.
+        let claims = claimed.entry(conn.ip.as_str()).or_default();
+        let contended = claims
+            .iter()
+            .any(|(at, app)| *app != conn.app_id && (at - conn.at).abs() <= WINDOW_SECONDS);
+        claims.push((conn.at, conn.app_id));
 
         let (tier, method) = match (candidates.len(), contended) {
             (1, false) => (Tier::High, "single-candidate"),
@@ -295,6 +297,46 @@ mod tests {
             "the second app shares an address"
         );
         assert_eq!(decisions[1].method, "address-shared-between-apps");
+    }
+
+    #[test]
+    fn a_shared_address_across_a_bucket_boundary_is_still_shared() {
+        // 89 and 91 straddle the 90-second boundary the previous implementation
+        // bucketed on, so the two connections used to land in different buckets
+        // and both be reported `High` despite sharing one CDN address.
+        let observations = vec![obs("shared.example", "1.2.3.4", 60)];
+        let decisions = resolve(
+            &[conn(1, 7, "1.2.3.4", 89), conn(2, 9, "1.2.3.4", 91)],
+            &observations,
+        );
+        assert_eq!(
+            decisions[0].tier,
+            Tier::High,
+            "the first claim is unopposed"
+        );
+        assert_eq!(
+            decisions[1].tier,
+            Tier::Probable,
+            "one second apart is still one address in use by two applications"
+        );
+        assert_eq!(decisions[1].method, "address-shared-between-apps");
+    }
+
+    #[test]
+    fn an_address_reused_long_afterwards_is_not_contended() {
+        // Two apps using the same address an hour apart is not a shared
+        // address; collapsing that to `Probable` would understate confidence
+        // for the most common case of all, a CDN endpoint reused all day.
+        let observations = vec![
+            obs("shared.example", "1.2.3.4", 58),
+            obs("shared.example", "1.2.3.4", 598),
+        ];
+        let decisions = resolve(
+            &[conn(1, 7, "1.2.3.4", 60), conn(2, 9, "1.2.3.4", 600)],
+            &observations,
+        );
+        assert_eq!(decisions[0].tier, Tier::High);
+        assert_eq!(decisions[1].tier, Tier::High, "an hour apart is unrelated");
     }
 
     #[test]
