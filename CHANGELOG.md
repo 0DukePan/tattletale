@@ -54,5 +54,5 @@ First release. Windows 10/11, standard user, no elevation.
 - **Unencrypted database.** It contains a record of your traffic and relies on
   the filesystem permissions of your user profile.
 
-[Unreleased]: https://github.com/OWNER/tattletale/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/tattletale/releases/tag/v0.1.0
+[Unreleased]: https://github.com/0DukePan/tattletale/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/0DukePan/tattletale/releases/tag/v0.1.0

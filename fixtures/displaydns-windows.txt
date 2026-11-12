@@ -1,0 +1,361 @@
+
+Windows IP Configuration
+
+    rr9---sn-9abxgpxuxaxjvh-9aby.cdn12.example.net
+    ----------------------------------------
+    Record Name . . . . . : rr9---sn-9abxgpxuxaxjvh-9aby.cdn12.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 709
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr9.cdn11.example.net
+
+
+    Record Name . . . . . : rr9.cdn11.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 709
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 198.51.100.3
+
+
+    2.1.168.192.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 2.1.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : svc.container.internal
+
+
+    Record Name . . . . . : 2.1.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : svc.container.internal
+
+
+    rr9---sn-9abxgpxuxaxjvh-9aby.cdn7.example.net
+    ----------------------------------------
+    Record Name . . . . . : rr9---sn-9abxgpxuxaxjvh-9aby.cdn7.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 693
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr9.cdn4.example.net
+
+
+    Record Name . . . . . : rr9.cdn4.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 693
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 198.51.100.2
+
+
+    rr9---sn-9g9ednre.cdn6.example.net
+    ----------------------------------------
+    Record Name . . . . . : rr9---sn-9g9ednre.cdn6.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 412
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr9.cdn3.example.net
+
+
+    Record Name . . . . . : rr9.cdn3.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 412
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.14
+
+
+    1.0.0.127.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 1.0.0.127.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : svc.container.internal
+
+
+    img.example.net
+    ----------------------------------------
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.9
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.6
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.7
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.20
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.10
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.8
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.5
+
+
+    Record Name . . . . . : img.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 106
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.19
+
+
+    api.example.dev
+    ----------------------------------------
+    Record Name . . . . . : api.example.dev
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.3
+
+
+    Record Name . . . . . : api.example.dev
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.11
+
+
+    Record Name . . . . . : api.example.dev
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 211
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.4
+
+
+    workstation.mshome.net
+    ----------------------------------------
+    No records of type AAAA
+
+
+    workstation.mshome.net
+    ----------------------------------------
+    Record Name . . . . . : WORKSTATION.mshome.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.1.1
+
+
+    svc.container.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    svc.container.internal
+    ----------------------------------------
+    Record Name . . . . . : svc.container.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.1.2
+
+
+    rr9---sn-ajh9q9-9a.cdn10.example.net
+    ----------------------------------------
+    Record Name . . . . . : rr9---sn-ajh9q9-9a.cdn10.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 1626
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr9.cdn9.example.net
+
+
+    Record Name . . . . . : rr9.cdn9.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 1626
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.12
+
+
+    assets.example.org
+    ----------------------------------------
+    Record Name . . . . . : assets.example.org
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.17
+
+
+    Record Name . . . . . : assets.example.org
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.18
+
+
+    Record Name . . . . . : assets.example.org
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.15
+
+
+    Record Name . . . . . : assets.example.org
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 2795
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.16
+
+
+    rr9---sn-ajh9q9-9o.cdn8.example.net
+    ----------------------------------------
+    Record Name . . . . . : rr9---sn-ajh9q9-9o.cdn8.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 251
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : rr9.cdn5.example.net
+
+
+    Record Name . . . . . : rr9.cdn5.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 251
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.13
+
+
+    svc.container.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    svc.container.internal
+    ----------------------------------------
+    Record Name . . . . . : svc.container.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 127.0.0.1
+
+
+    1.1.168.192.in-addr.arpa
+    ----------------------------------------
+    Record Name . . . . . : 1.1.168.192.in-addr.arpa.
+    Record Type . . . . . : 12
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    PTR Record  . . . . . : WORKSTATION.mshome.net
+
+
+    msg.chatwidget.example.com
+    ----------------------------------------
+    Record Name . . . . . : msg.chatwidget.example.com
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : msg.chatwidget.example.com.cdn.cloudflare.net
+
+
+    Record Name . . . . . : msg.chatwidget.example.com.cdn.cloudflare.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.2
+
+
+    Record Name . . . . . : msg.chatwidget.example.com.cdn.cloudflare.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 121
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 203.0.113.1
+
+
+    r9---sn-9abxgpxuxaxjvh-9abd.cdn2.example.net
+    ----------------------------------------
+    Record Name . . . . . : r9---sn-9abxgpxuxaxjvh-9abd.cdn2.example.net
+    Record Type . . . . . : 5
+    Time To Live  . . . . : 74
+    Data Length . . . . . : 8
+    Section . . . . . . . : Answer
+    CNAME Record  . . . . : r9.cdn1.example.net
+
+
+    Record Name . . . . . : r9.cdn1.example.net
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 74
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 198.51.100.1
+
+
+    svc.container.internal
+    ----------------------------------------
+    No records of type AAAA
+
+
+    svc.container.internal
+    ----------------------------------------
+    Record Name . . . . . : svc.container.internal
+    Record Type . . . . . : 1
+    Time To Live  . . . . : 597362
+    Data Length . . . . . : 4
+    Section . . . . . . . : Answer
+    A (Host) Record . . . : 192.168.1.2
+
+

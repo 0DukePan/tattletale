@@ -1,6 +1,6 @@
 # Install tattle on Windows.
 #
-#   irm https://raw.githubusercontent.com/OWNER/tattletale/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/0DukePan/tattletale/main/install.ps1 | iex
 #
 # Downloads the latest release, verifies its SHA256 against the published
 # checksum, and puts the binary somewhere on the user PATH. No admin rights and
@@ -9,7 +9,7 @@
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$repo = if ($env:TATTLE_REPO) { $env:TATTLE_REPO } else { 'OWNER/tattletale' }
+$repo = if ($env:TATTLE_REPO) { $env:TATTLE_REPO } else { '0DukePan/tattletale' }
 $dest = Join-Path $env:LOCALAPPDATA 'tattletale\bin'
 
 Write-Host 'tattletale installer' -ForegroundColor Yellow

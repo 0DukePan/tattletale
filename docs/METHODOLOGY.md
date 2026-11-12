@@ -135,7 +135,13 @@ The claims in this document are executable:
 
 - Tier rules and edge cases: `cargo test --lib resolve`
 - End-to-end on the live OS: `cargo test -- --ignored live_`
-- The parser against a real 361-line `ipconfig` dump: `cargo test --test dns_real`
+- The parser against a real 361-line `ipconfig` capture: `cargo test --test dns_real`.
+  The committed capture is **sanitised** — every hostname, machine name and
+  address was replaced with a documentation-range equivalent while preserving
+  the formatting, record types, TTLs and CNAME chains exactly. A second test
+  asserts that the published fixture contains no identifying data, because a
+  privacy tool publishing its author's DNS cache would be a poor way to make
+  this point.
 
 The tool never sends data anywhere. The only outbound request in the entire
 product is a user-initiated tracker-list update, and it does not exist yet in

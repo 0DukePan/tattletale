@@ -8,7 +8,7 @@ A single Windows binary that shows which application contacted which company,
 when, and how often — then writes it up as one HTML receipt you can keep,
 print, or post.
 
-[![CI](https://github.com/OWNER/tattletale/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/tattletale/actions/workflows/ci.yml)
+[![CI](https://github.com/0DukePan/tattletale/actions/workflows/ci.yml/badge.svg)](https://github.com/0DukePan/tattletale/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey.svg)](#)
 
@@ -24,10 +24,10 @@ output: synthetic data is always labelled as synthetic.</sub>
 ## Install
 
 ```powershell
-irm https://raw.githubusercontent.com/OWNER/tattletale/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/0DukePan/tattletale/main/install.ps1 | iex
 ```
 
-Or download the zip from [Releases](https://github.com/OWNER/tattletale/releases),
+Or download the zip from [Releases](https://github.com/0DukePan/tattletale/releases),
 check it against `SHA256SUMS.txt`, and put `tattle.exe` on your `PATH`.
 
 No account. No cloud. No packet capture. No admin prompt.
@@ -123,7 +123,7 @@ HTML receipt, live view, tracker lists, demo mode, purge.
 ## Build from source
 
 ```powershell
-git clone https://github.com/OWNER/tattletale
+git clone https://github.com/0DukePan/tattletale
 cd tattletale
 cargo build --release
 .\target\release\tattle.exe doctor
