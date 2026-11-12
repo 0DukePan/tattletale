@@ -73,9 +73,18 @@ mod tests {
     fn the_default_receipt_is_in_the_working_directory() {
         let path = report_path(None);
         assert!(path.ends_with("receipt.html"));
+
+        // The requirement is "not buried in the data directory", expressed by
+        // comparing the directories. An earlier version asserted the path did
+        // not contain "tattletale\tattletale", which is true of the checkout
+        // path on GitHub Actions and made the test fail for the wrong reason:
+        // it was testing where CI puts the repository, not where the receipt
+        // goes.
         assert!(
-            !path.to_string_lossy().contains("tattletale\\tattletale"),
-            "not in the data dir"
+            !path.starts_with(data_dir()),
+            "the receipt must not be filed away in {}; got {}",
+            data_dir().display(),
+            path.display()
         );
     }
 
