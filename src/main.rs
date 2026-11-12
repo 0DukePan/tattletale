@@ -351,15 +351,15 @@ fn app(cli: &Cli, name: &str, since: &str) -> anyhow::Result<()> {
 /// recovered, not because deleting is discouraged.
 fn purge(cli: &Cli, yes: bool) -> anyhow::Result<()> {
     let db = cli.db.clone().unwrap_or_else(default_db_path);
-    let lists = tattletale::classify::lists_dir();
 
     if !yes {
         println!("this deletes:");
-        for path in [&db, &lists] {
-            if path.exists() {
-                println!("  {}", path.display());
-            }
+        if db.exists() {
+            println!("  {}", db.display());
         }
+        println!(
+            "\n  (downloaded tracker lists are kept: they are public data, not a record of you)"
+        );
         print!("continue? [y/N] ");
         std::io::Write::flush(&mut std::io::stdout())?;
 
@@ -387,11 +387,6 @@ fn purge(cli: &Cli, yes: bool) -> anyhow::Result<()> {
             removed += 1;
         }
     }
-    if lists.exists() {
-        std::fs::remove_dir_all(&lists)?;
-        removed += 1;
-    }
-
     println!("deleted {removed} item(s); nothing recorded remains");
     Ok(())
 }
@@ -605,15 +600,25 @@ fn watch(cli: &Cli, duration: &str) -> anyhow::Result<()> {
     let started = unix_now();
 
     println!("recording for {duration} into {}", db.display());
-    let mut last = tattletale::watch::TickStats::default();
+
+    // Accumulate across ticks. Reporting only the final tick made the summary
+    // say "0 attributed" whenever the last second happened to have no new
+    // connections, which reads as if attribution had failed entirely.
+    let mut total_resolved = 0usize;
+    let mut peak_connections = 0usize;
+    let mut last_names = 0usize;
+
     watcher.run(std::time::Duration::from_secs(span as u64), |stats| {
-        last = stats;
+        total_resolved += stats.resolved;
+        peak_connections = peak_connections.max(stats.connections);
+        if stats.names > 0 {
+            last_names = stats.names;
+        }
     })?;
     watcher.finish(unix_now())?;
 
     println!(
-        "done: {} connections in the last cycle, {} names in the resolver cache, {} attributed",
-        last.connections, last.names, last.resolved
+        "done: up to {peak_connections} connections observed, {last_names} names in the resolver cache, {total_resolved} attributed"
     );
     println!(
         "elapsed {}s; next: tattle report --since {}",
