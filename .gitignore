@@ -27,3 +27,7 @@ desktop.ini
 
 # Env
 .env
+
+# Python bytecode from the docs tooling
+__pycache__/
+*.pyc

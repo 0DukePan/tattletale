@@ -62,6 +62,26 @@ cargo test -- --ignored live_
 
 Run them before a release, not on every commit.
 
+## Regenerating the README media
+
+The animated demo and the receipt screenshot are generated, not hand-made, so
+they cannot drift from what the program actually prints.
+
+```powershell
+# 1. frames from the real live view
+cargo run --example gif_frames | Out-File -Encoding utf8 "$env:TEMP\frames.txt"
+
+# 2. paint them into a GIF (needs Python with Pillow)
+python scripts/make_demo_gif.py "$env:TEMP\frames.txt" docs\demo.gif
+```
+
+`examples/gif_frames` drives the same `Frame::render` the binary uses. If you
+change the live view's layout, the GIF changes with it — that is the point, and
+it is also why the frames are not checked in.
+
+The receipt image is a screenshot of `tattle demo --out demo.html` rendered at a
+1200 px viewport, then cropped to the content.
+
 ## House rules
 
 1. **Never guess an attribution.** An unknown connection is reported as
