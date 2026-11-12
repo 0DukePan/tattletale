@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "tattletale"
 version = "0.1.0"
 edition = "2021"
@@ -24,6 +24,7 @@ clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 anyhow = "1"
+ureq = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
@@ -46,3 +47,4 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+

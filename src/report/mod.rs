@@ -47,6 +47,9 @@ pub struct ReportModel {
     pub coverage: f64,
     /// How many connections could be named.
     pub named: u64,
+    /// True when the data is a synthetic demo scene. The receipt says so in
+    /// large letters: a fabricated screenshot must never pass as real.
+    pub synthetic: bool,
 }
 
 /// What happened while the machine was supposed to be idle.
@@ -82,6 +85,9 @@ pub fn render(model: &ReportModel) -> String {
     out.push_str(STYLESHEET);
     out.push_str("</style>\n</head>\n<body>\n<main class=\"receipt\">\n");
 
+    if model.synthetic {
+        out.push_str("<div class=\"synthetic\">Synthetic demo data &mdash; not a record of this machine</div>\n");
+    }
     header(&mut out, model);
     headline(&mut out, model);
     night(&mut out, model);
@@ -429,6 +435,7 @@ mod tests {
             caveats: vec![],
             coverage: 0.0,
             named: 0,
+            synthetic: false,
         };
         assert_eq!(
             model.tracker_share(),

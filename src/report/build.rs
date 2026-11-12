@@ -35,11 +35,25 @@ pub fn build(
     now: i64,
     machine: String,
 ) -> anyhow::Result<ReportModel> {
-    let totals = store.totals(since)?;
-    let apps = store.app_rows(since, 20)?;
-    let sites = store.site_rows(since, 20)?;
+    // Categories are applied here rather than at collection time so a list
+    // update retroactively improves receipts that were already collected.
+    let classifier = crate::classify::Classifier::load(Some(&crate::classify::lists_dir()));
+
+    let mut apps = store.app_rows(since, 20)?;
+    let mut sites = store.site_rows(since, 20)?;
     let events = store.events(since, 50_000)?;
     let health = crate::health::assess(&events);
+
+    // The stored category comes from whatever list was current when the row was
+    // written; the classifier is authoritative now.
+    apply_categories(&mut apps, &classifier);
+    apply_categories_to_sites(&mut sites, &classifier);
+
+    let (flagged, tracked) = count_flagged(&sites);
+
+    let mut totals = store.totals(since)?;
+    totals.tracked = tracked;
+    totals.flagged = flagged;
 
     Ok(ReportModel {
         generated_at: now,
@@ -53,6 +67,7 @@ pub fn build(
         caveats: health.caveats.clone(),
         coverage: health.coverage(),
         named: health.named,
+        synthetic: false,
     })
 }
 
@@ -122,6 +137,45 @@ fn local_offset_seconds() -> i64 {
 #[cfg(not(windows))]
 fn local_offset_seconds() -> i64 {
     0
+}
+
+/// Apply the current classifier to every site in every app card.
+///
+/// The store persists a category when an attribution is written, but a list
+/// update should improve old receipts. Re-classifying here means a receipt is
+/// always read through the newest rules, without rewriting history.
+fn apply_categories(apps: &mut [crate::store::AppRow], classifier: &crate::classify::Classifier) {
+    for app in apps {
+        for site in &mut app.top_sites {
+            site.category = classifier.classify(&site.host);
+        }
+        app.tracked = app
+            .top_sites
+            .iter()
+            .filter(|s| s.category.is_flagged())
+            .map(|s| s.connections)
+            .sum();
+    }
+}
+
+fn apply_categories_to_sites(
+    sites: &mut [crate::store::SiteRow],
+    classifier: &crate::classify::Classifier,
+) {
+    for site in sites {
+        site.category = classifier.classify(&site.host);
+    }
+}
+
+/// Connections and sites that hit a flagged domain.
+fn count_flagged(sites: &[crate::store::SiteRow]) -> (u64, u64) {
+    let flagged_sites = sites.iter().filter(|s| s.category.is_flagged()).count() as u64;
+    let tracked: u64 = sites
+        .iter()
+        .filter(|s| s.category.is_flagged())
+        .map(|s| s.connections)
+        .sum();
+    (flagged_sites, tracked)
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-﻿//! Windows collectors.
+//! Windows collectors.
 //!
 //! Two OS facts drive this module:
 //!
@@ -72,6 +72,9 @@ pub struct Collector {
     /// Addresses bound to this machine's interfaces. Refreshed every few poll
     /// ticks, because a laptop changes networks without telling anyone.
     local_addresses: Vec<String>,
+    /// This process's own pid. The tool must never appear in its own receipt:
+    /// a reader who sees the tool itself claiming connections assumes it is phoning home.
+    own_pid: u32,
     local_refreshed: Option<Instant>,
 }
 
@@ -90,6 +93,7 @@ impl Collector {
             proc_cache: HashMap::new(),
             local_addresses: Vec::new(),
             local_refreshed: None,
+            own_pid: std::process::id(),
         }
     }
 
@@ -134,6 +138,10 @@ impl Collector {
         let mut samples = Vec::with_capacity(rows.len());
         for row in rows {
             if row.proto == Proto::Udp {
+                continue;
+            }
+            if row.pid == self.own_pid {
+                // Observing yourself is noise, not evidence.
                 continue;
             }
             let Some(proc) = self.process(row.pid, now) else {

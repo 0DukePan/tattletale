@@ -12,6 +12,7 @@
 //! * [`platform`] â€” the only OS-specific code (Windows collectors)
 
 pub mod classify;
+pub mod demo;
 pub mod dns;
 pub mod health;
 pub mod model;

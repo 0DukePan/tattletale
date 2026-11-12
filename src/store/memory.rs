@@ -224,6 +224,7 @@ impl Store for MemoryStore {
             apps: apps.len() as u64,
             sites: sites.len() as u64,
             tracked,
+            flagged: 0,
         })
     }
 

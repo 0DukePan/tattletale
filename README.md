@@ -78,6 +78,9 @@ tattle report --open          # ...and open it
 | `tattle doctor` | Checks the collector, the interface list, and the DNS source |
 | `tattle watch --duration 10m` | Records into the local database |
 | `tattle report --since 24h` | Writes a single-file HTML receipt |
+| `tattle demo` | Renders a labelled synthetic scene, for a look before recording |
+| `tattle lists update` | Downloads public tracker lists (the only outbound request) |
+| `tattle lists status` | Shows how many rules are loaded and where they came from |
 | `tattle --db <path>` | Uses a different database file |
 
 ## How sure is it?
@@ -118,12 +121,13 @@ Recovering browser lookups is the first item in v0.1.1.
 
 ## Status
 
-Early. Working: the collector, the DNS parser, the attribution engine, the
-two stores, and the receipt. Not yet built: the live TUI, tracker lists,
-and packaged releases.
+Working: the collector, the DNS parser, the attribution engine, the two stores,
+the receipt renderer, tracker lists, and a labelled demo mode.
+Not yet built: the live TUI and packaged releases.
 
-- 76 tests, `clippy -D warnings` clean
+- 87 tests, `clippy -D warnings` clean
 - Verified against a live Windows 10 machine, not only against fixtures
+- 72,999 tracker rules load from OISD and EasyList; the bundled seed works offline
 - [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — how attribution works and where it fails
 
 ## License

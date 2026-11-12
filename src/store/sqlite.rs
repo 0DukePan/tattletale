@@ -399,6 +399,7 @@ impl Store for SqliteStore {
             apps: apps as u64,
             sites: sites as u64,
             tracked: tracked as u64,
+            flagged: 0,
         })
     }
 

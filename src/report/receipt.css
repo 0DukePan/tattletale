@@ -267,6 +267,20 @@ td.flagged { color: var(--danger); }
   border-radius: 4px;
 }
 
+/* ---------- synthetic banner ---------- */
+
+.synthetic {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
 /* ---------- footer ---------- */
 
 footer {

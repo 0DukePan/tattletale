@@ -1,4 +1,4 @@
-﻿//! Persistence. SQLite in production, in-memory in tests.
+//! Persistence. SQLite in production, in-memory in tests.
 //!
 //! The trait exists so the attribution engine and the report renderer can be
 //! tested against a fake store without creating files or depending on timing.
@@ -63,6 +63,8 @@ pub struct Totals {
     pub sites: u64,
     /// Connections whose best candidate is on a tracker list.
     pub tracked: u64,
+    /// Distinct flagged sites contacted in the window.
+    pub flagged: u64,
 }
 
 /// One application's traffic in a window.

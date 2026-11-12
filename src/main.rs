@@ -55,8 +55,38 @@ enum Command {
         duration: String,
     },
 
+    /// Fill a database with a labelled synthetic scene, then render it.
+    ///
+    /// The receipt is stamped as synthetic. This exists so the tool can be seen
+    /// before it has recorded anything, and so the README screenshot does not
+    /// depend on what the author happened to browse.
+    Demo {
+        /// Where to write the receipt.
+        #[arg(long, value_name = "PATH")]
+        out: Option<std::path::PathBuf>,
+
+        /// Open the receipt when it is written.
+        #[arg(long)]
+        open: bool,
+    },
+
+    /// Inspect or refresh the tracker lists.
+    Lists {
+        #[command(subcommand)]
+        action: ListsAction,
+    },
+
     /// Print the environment and check that collection can work here.
     Doctor,
+}
+
+#[derive(Debug, Subcommand)]
+enum ListsAction {
+    /// Show which lists are loaded and how many rules they carry.
+    Status,
+    /// Download the public tracker lists. This is the only outbound request
+    /// the tool ever makes, and it only happens when you ask for it.
+    Update,
 }
 
 fn main() -> ExitCode {
@@ -81,11 +111,149 @@ fn run() -> anyhow::Result<()> {
             open,
         }) => report(&cli, since, out.as_ref(), open),
         Some(Command::Watch { ref duration }) => watch(&cli, duration),
+        Some(Command::Demo { ref out, open }) => demo(&cli, out.as_ref(), open),
+        Some(Command::Lists { ref action }) => lists(action),
         Some(Command::Doctor) => {
             doctor(&cli);
             Ok(())
         }
     }
+}
+
+fn lists(action: &ListsAction) -> anyhow::Result<()> {
+    let dir = tattletale::classify::lists_dir();
+
+    match action {
+        ListsAction::Status => {
+            let classifier = tattletale::classify::Classifier::load(Some(&dir));
+            println!("lists directory  {}", dir.display());
+            println!("rules loaded     {}", classifier.len());
+            println!("source           {}", classifier.source());
+
+            let seed = tattletale::classify::Classifier::seed();
+            println!("  bundled seed   {} rules", seed.len());
+
+            let mut downloaded = 0;
+            if let Ok(entries) = std::fs::read_dir(&dir) {
+                for entry in entries.flatten() {
+                    if entry.path().extension().is_some_and(|e| e == "txt") {
+                        downloaded += 1;
+                    }
+                }
+            }
+            println!("  downloaded     {downloaded} file(s)");
+            if downloaded == 0 {
+                println!("\nNo downloaded lists. `tattle lists update` fetches them.");
+            }
+            Ok(())
+        }
+        ListsAction::Update => {
+            std::fs::create_dir_all(&dir)?;
+            println!("downloading tracker lists into {}", dir.display());
+
+            let mut total = 0usize;
+            for list in tattletale::classify::SOURCES {
+                match tattletale::classify::download(list, &dir) {
+                    Ok(rules) => {
+                        total += rules;
+                        println!("  {:<28} {:>7} rules", list.name, rules);
+                    }
+                    Err(err) => {
+                        // A failed list is not fatal: the seed still works and a
+                        // partial update beats no update.
+                        println!("  {:<28} failed: {err}", list.name);
+                    }
+                }
+            }
+
+            let classifier = tattletale::classify::Classifier::load(Some(&dir));
+            println!(
+                "\n{total} rules downloaded; {} rules active",
+                classifier.len()
+            );
+            if total == 0 {
+                anyhow::bail!("no list could be downloaded; check the network and the URLs");
+            }
+            Ok(())
+        }
+    }
+}
+
+fn demo(cli: &Cli, out: Option<&std::path::PathBuf>, open: bool) -> anyhow::Result<()> {
+    let now = unix_now();
+    let since = now - 24 * 3600;
+
+    // The demo writes to a temp database, never to the user's real one: a
+    // synthetic row must not be able to contaminate a real receipt.
+    let store = SqliteStore::open_in_memory()?;
+    let mut store = store;
+
+    let (samples, records) =
+        tattletale::demo::materialise(tattletale::demo::BROWSING, since, now, 24);
+    let (night_samples, night_records) =
+        tattletale::demo::materialise_night(tattletale::demo::NIGHT, since, now, 24);
+
+    store.record_dns(&records)?;
+    store.record_dns(&night_records)?;
+
+    // Replay one second at a time so the store's open/continue logic runs for
+    // real rather than being faked with a precomputed counter.
+    let mut all = samples;
+    all.extend(night_samples);
+    all.sort_by_key(|s| s.at);
+
+    let mut index = 0;
+    while index < all.len() {
+        let at = all[index].at;
+        let end = all[index..]
+            .iter()
+            .position(|s| s.at != at)
+            .map_or(all.len(), |p| index + p);
+        let batch = &all[index..end];
+        store.record(batch)?;
+
+        let pending = store.pending(512)?;
+        if !pending.is_empty() {
+            let observations = store.observations(at, 90)?;
+            let decisions = tattletale::resolve::resolve(&pending, &observations);
+            store.save_attributions(&decisions)?;
+        }
+        index = end;
+    }
+
+    let mut model = tattletale::report::build::build(
+        &store as &dyn Store,
+        since,
+        now,
+        "demo machine".to_string(),
+    )?;
+    model.synthetic = true;
+    model.caveats.push(
+        "This receipt is built from a synthetic scene, not from observed traffic. Run `tattle watch` to record your own.".to_string(),
+    );
+
+    let html = tattletale::report::render(&model);
+    let path = out.cloned().unwrap_or_else(default_report_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, html)?;
+
+    println!("synthetic receipt written to {}", path.display());
+    println!(
+        "  {} connections | {} apps | {} sites | {:.0}% flagged | {:.0}% named",
+        model.totals.connections,
+        model.totals.apps,
+        model.totals.sites,
+        model.tracker_share(),
+        model.coverage * 100.0
+    );
+    let _ = cli;
+
+    if open {
+        open_path(&path);
+    }
+    Ok(())
 }
 
 fn report(
