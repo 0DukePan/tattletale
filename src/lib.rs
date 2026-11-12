@@ -13,6 +13,7 @@
 
 pub mod classify;
 pub mod dns;
+pub mod health;
 pub mod model;
 pub mod platform;
 pub mod report;

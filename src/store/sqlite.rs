@@ -469,7 +469,7 @@ impl Store for SqliteStore {
         // One row per connection, not per attribution: a connection that had
         // three candidate names is still one connection on the chart.
         let mut stmt = self.conn.prepare(
-            "SELECT p.name, MIN(a.site), c.last_open_at, COALESCE(MAX(a.tier), 0)
+            "SELECT p.name, MIN(a.site), c.last_open_at, COALESCE(MAX(a.tier), 0), c.ip, c.port
              FROM conn c
              JOIN app p ON p.id = c.app_id
              LEFT JOIN attribution a ON a.conn_id = c.id
@@ -484,6 +484,8 @@ impl Store for SqliteStore {
                 site: row.get::<_, Option<String>>(1)?,
                 at: row.get(2)?,
                 tier: Tier::from_int(row.get(3)?),
+                ip: row.get(4)?,
+                port: row.get::<_, i64>(5)? as u16,
             })
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)

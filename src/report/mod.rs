@@ -43,6 +43,10 @@ pub struct ReportModel {
     pub hourly: Vec<u64>,
     /// Caveats that must be shown, e.g. DoH detected.
     pub caveats: Vec<String>,
+    /// Fraction of connections that carry a domain name, 0.0 to 1.0.
+    pub coverage: f64,
+    /// How many connections could be named.
+    pub named: u64,
 }
 
 /// What happened while the machine was supposed to be idle.
@@ -122,6 +126,20 @@ fn headline(out: &mut String, model: &ReportModel) {
         out,
         "<div class=\"{class}\"><b>{share:.0}%</b><span>flagged</span></div>"
     );
+    // Coverage sits next to the headline numbers on purpose: a reader must see
+    // how much of the traffic was explained before trusting the rest.
+    if model.named > 0 {
+        let coverage = model.coverage * 100.0;
+        let class = if coverage < 50.0 {
+            "stat partial"
+        } else {
+            "stat"
+        };
+        let _ = writeln!(
+            out,
+            "<div class=\"{class}\" title=\"connections that carry a domain name\"><b>{coverage:.0}%</b><span>named</span></div>"
+        );
+    }
     out.push_str("</section>\n");
 }
 
@@ -409,6 +427,8 @@ mod tests {
             night: NightSummary::default(),
             hourly: vec![],
             caveats: vec![],
+            coverage: 0.0,
+            named: 0,
         };
         assert_eq!(
             model.tracker_share(),

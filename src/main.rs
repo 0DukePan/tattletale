@@ -79,7 +79,7 @@ fn run() -> anyhow::Result<()> {
             ref since,
             ref out,
             open,
-        }) => report(&cli, &since, out.as_ref(), open),
+        }) => report(&cli, since, out.as_ref(), open),
         Some(Command::Watch { ref duration }) => watch(&cli, duration),
         Some(Command::Doctor) => {
             doctor(&cli);

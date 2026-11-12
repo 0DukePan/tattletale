@@ -1,4 +1,4 @@
-﻿//! In-memory store used by the tests and by `tattle replay`.
+//! In-memory store used by the tests and by `tattle replay`.
 //!
 //! It implements the same contract as the SQLite store, including the counting
 //! rules, so a test that passes here is testing behaviour and not SQL. Keeping
@@ -341,6 +341,8 @@ impl Store for MemoryStore {
                     .and_then(|rows| rows.first())
                     .map(|(host, _)| site_of(host)),
                 at: conn.last_open_at,
+                ip: conn.ip.clone(),
+                port: conn.port,
                 tier: self
                     .attributions
                     .get(&conn.id)

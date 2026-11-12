@@ -18,6 +18,10 @@ pub struct Event {
     pub site: Option<String>,
     pub at: i64,
     pub tier: Tier,
+    /// The address dialled. Needed to recognise resolver endpoints, which is
+    /// how the receipt knows to disclose a DNS over HTTPS blind spot.
+    pub ip: String,
+    pub port: u16,
 }
 
 /// Assemble the model for a window ending at `now`.
@@ -35,6 +39,7 @@ pub fn build(
     let apps = store.app_rows(since, 20)?;
     let sites = store.site_rows(since, 20)?;
     let events = store.events(since, 50_000)?;
+    let health = crate::health::assess(&events);
 
     Ok(ReportModel {
         generated_at: now,
@@ -45,7 +50,9 @@ pub fn build(
         hourly: hourly_histogram(&events),
         apps,
         sites,
-        caveats: Vec::new(),
+        caveats: health.caveats.clone(),
+        coverage: health.coverage(),
+        named: health.named,
     })
 }
 
@@ -127,6 +134,8 @@ mod tests {
             site: Some("example.com".into()),
             at,
             tier: Tier::High,
+            ip: "1.2.3.4".into(),
+            port: 443,
         }
     }
 
@@ -208,7 +217,7 @@ mod tests {
         let mut found = 0;
         while found < 3 && events.len() < 200_000 {
             let hour = hour_of_day(at);
-            if hour >= 12 && hour < 18 {
+            if (12..18).contains(&hour) {
                 events.push(event(at, "chrome.exe"));
                 found += 1;
             }
