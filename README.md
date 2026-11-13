@@ -56,8 +56,45 @@ irm https://raw.githubusercontent.com/0DukePan/tattletale/main/install.ps1 | iex
 
 The installer downloads the latest release, checks its SHA256 against the
 published checksum, and puts `tattle.exe` under `%LOCALAPPDATA%\tattletale\bin`.
-Or download the zip from [Releases](https://github.com/0DukePan/tattletale/releases)
-and put the binary on your `PATH` yourself.
+
+Every release also carries a winget manifest, so this works too:
+
+```powershell
+winget install --manifest https://github.com/0DukePan/tattletale/releases/latest/download/0DukePan.tattletale.installer.yaml
+```
+
+### Verify before you run it
+
+The binary is not signed with a purchased certificate — it is signed keylessly,
+with a short-lived certificate bound to the CI run that produced it. There is no
+private key anywhere to steal:
+
+```powershell
+cosign verify-blob tattle.exe `
+  --signature tattle.exe.sig `
+  --certificate tattle.exe.pem `
+  --certificate-identity-regexp "https://github.com/0DukePan/tattletale/.*" `
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+gh attestation verify tattle.exe --repo 0DukePan/tattletale
+```
+
+The first proves the workflow signed it; the second proves GitHub built it from
+this repository's source.
+
+### Updating
+
+```powershell
+tattle update --check    # is there a newer release? changes nothing
+tattle update            # download, verify the checksum, stage the new binary
+```
+
+**There is no background updater, deliberately.** A silent update check is an
+outbound connection on every run, which would make the privacy claim on this
+page false for the way the tool is normally used. An update channel is also the
+most valuable thing in any program to compromise. `tattle update` verifies the
+release checksum and stages the new binary next to the old one; swapping it is
+a command you run.
 
 ### From source
 
@@ -100,6 +137,7 @@ tattle demo                 # a labelled example, before recording anything
 | `tattle lists status` | Show which lists are loaded and where they came from |
 | `tattle doctor` | Check whether this machine can be measured |
 | `tattle block` | Turn flagged domains into a hosts-file fragment you apply |
+| `tattle update --check` | Ask the release feed whether a newer version exists |
 | `tattle purge` | Delete everything it has recorded |
 | `tattle top --json` | Machine-readable output for scripts |
 

@@ -8,6 +8,23 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Keyless release signing and build provenance.** Every artifact is signed by
+  the release workflow with a short-lived certificate bound to that run, and
+  attested by GitHub. `cosign verify-blob` proves the workflow signed it;
+  `gh attestation verify` proves GitHub built it from this repository. A
+  purchased certificate would be better for SmartScreen reputation; it is not
+  required for verifiability, and it is not something this project can afford.
+- **winget manifests**, generated during the release so they always carry the
+  hash of the artifact that was just built.
+- **`tattle update [--check]`** — an updater you invoke, not one that runs. It
+  fetches the release, verifies the SHA-256 before writing anything, and stages
+  the new binary beside the running one because Windows will not replace a
+  locked executable. There is deliberately no background update check: that
+  would be an outbound connection on every run, and it would contradict the
+  claim on the front page.
+
+### Added
+
 - **`--reverse-dns`** — names the owner of an address when no hostname explains
   it, which is the only thing that can be recovered for traffic that bypassed
   the system resolver. In a controlled test with a flushed cache, four

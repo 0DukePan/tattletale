@@ -18,6 +18,7 @@ pub mod paths;
 pub mod purge;
 pub mod report;
 pub mod top;
+pub mod update;
 pub mod watch;
 
 pub use format::{parse_window, truncate, RankBy};

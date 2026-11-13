@@ -35,6 +35,32 @@ tattle report --open
 The tool excludes its own process id from collection, so it will not appear in
 its own receipt.
 
+## Verifying a downloaded release
+
+Releases are **not** signed with a purchased code-signing certificate. They are
+signed keylessly: GitHub Actions issues a short-lived OIDC token to the release
+workflow, cosign signs the artifact with it, and the certificate is published
+alongside. Nothing long-lived exists to be stolen, and the signature names the
+exact workflow run that made the file.
+
+```powershell
+cosign verify-blob tattle.exe `
+  --signature tattle.exe.sig `
+  --certificate tattle.exe.pem `
+  --certificate-identity-regexp "https://github.com/0DukePan/tattletale/.*" `
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+gh attestation verify tattle.exe --repo 0DukePan/tattletale
+```
+
+What this proves: the file was produced by that workflow, in this repository,
+from the commit the run records. What it does not prove: that the maintainer's
+account was not compromised. No signature scheme survives that.
+
+Windows SmartScreen will still warn on first run, because SmartScreen reputation
+comes from a paid certificate and download volume, neither of which this project
+has. Verifying the hash or the attestation is the substitute.
+
 ## What it stores
 
 A SQLite database at `%LOCALAPPDATA%\tattletale\tattletale.db` containing the

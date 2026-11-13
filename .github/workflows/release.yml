@@ -10,6 +10,11 @@ on:
 
 permissions:
   contents: write
+  # Keyless signing: the workflow's OIDC identity is the signer, so there is no
+  # certificate to buy and no long-lived key to steal or renew.
+  id-token: write
+  # Build provenance attestation, verifiable with `gh attestation verify`.
+  attestations: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,27 +40,119 @@ jobs:
       - name: Build
         run: cargo build --release --locked
 
-      - name: Stage artifact
+      - name: Stage artifacts
+        id: stage
         shell: pwsh
         run: |
-          $name = "tattle-${{ github.ref_name }}-x86_64-pc-windows-msvc"
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $name = "tattle-v$version-x86_64-pc-windows-msvc"
           New-Item -ItemType Directory -Force -Path "dist/$name" | Out-Null
+
+          # The bare binary is what `tattle update` fetches: it can verify a hash
+          # and stage a file, but it has no unzip and should not grow one.
+          Copy-Item target/release/tattle.exe "dist/tattle.exe"
           Copy-Item target/release/tattle.exe "dist/$name/"
           Copy-Item README.md, LICENSE "dist/$name/"
-          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
-          $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
-          "$hash  $name.zip" | Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
-          Get-Content "dist/SHA256SUMS.txt"
 
-      # `generate_release_notes` and `body` cannot both take effect: the action
-      # uses whichever it resolves last, so the curated install instructions were
-      # silently replacing the generated notes. Keep the instructions.
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
+
+          $exeHash = (Get-FileHash "dist/tattle.exe" -Algorithm SHA256).Hash.ToLower()
+          $zipHash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
+          @(
+            "$exeHash  tattle.exe"
+            "$zipHash  $name.zip"
+          ) | Out-File -FilePath "dist/SHA256SUMS.txt" -Encoding ascii
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "zip_name=$name.zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "zip_hash=$zipHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      # A winget manifest is three small YAML files. Generating them here means
+      # they always carry the hash of the artifact that was just built, rather
+      # than one someone remembered to update.
+      - name: Generate winget manifests
+        shell: pwsh
+        run: |
+          $version = "${{ steps.stage.outputs.version }}"
+          $zip = "${{ steps.stage.outputs.zip_name }}"
+          $hash = "${{ steps.stage.outputs.zip_hash }}"
+          $out = "dist/winget"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          @"
+          PackageIdentifier: 0DukePan.tattletale
+          PackageVersion: $version
+          DefaultLocale: en-US
+          ManifestType: version
+          ManifestVersion: 1.6.0
+          "@ | Set-Content -Path "$out/0DukePan.tattletale.yaml" -Encoding utf8
+
+          @"
+          PackageIdentifier: 0DukePan.tattletale
+          PackageVersion: $version
+          PackageLocale: en-US
+          Publisher: 0DukePan
+          PackageName: tattletale
+          License: MIT
+          ShortDescription: See every domain your apps phone home to
+          Moniker: tattle
+          Tags:
+            - privacy
+            - network
+            - dns
+            - cli
+          ManifestType: defaultLocale
+          ManifestVersion: 1.6.0
+          "@ | Set-Content -Path "$out/0DukePan.tattletale.locale.en-US.yaml" -Encoding utf8
+
+          @"
+          PackageIdentifier: 0DukePan.tattletale
+          PackageVersion: $version
+          InstallerType: zip
+          NestedInstallerType: portable
+          NestedInstallerFiles:
+            - RelativeFilePath: tattle.exe
+              PortableCommandAlias: tattle
+          Installers:
+            - Architecture: x64
+              InstallerUrl: https://github.com/0DukePan/tattletale/releases/download/v$version/$zip
+              InstallerSha256: $($hash.ToUpper())
+          ManifestType: installer
+          ManifestVersion: 1.6.0
+          "@ | Set-Content -Path "$out/0DukePan.tattletale.installer.yaml" -Encoding utf8
+
+          Get-ChildItem $out | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      # Keyless: cosign asks GitHub for a short-lived OIDC token, signs, and
+      # attaches the certificate. Verification proves the artifact came from
+      # this workflow in this repository, with no private key existing anywhere.
+      - name: Sign artifacts
+        shell: pwsh
+        run: |
+          $zip = "${{ steps.stage.outputs.zip_name }}"
+          cosign sign-blob --yes --output-signature dist/tattle.exe.sig --output-certificate dist/tattle.exe.pem dist/tattle.exe
+          cosign sign-blob --yes --output-signature "dist/$zip.sig" --output-certificate "dist/$zip.pem" "dist/$zip"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/tattle.exe
+            dist/${{ steps.stage.outputs.zip_name }}
+
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            dist/tattle.exe
             dist/*.zip
             dist/SHA256SUMS.txt
+            dist/*.sig
+            dist/*.pem
+            dist/winget/*.yaml
           body: |
             ## Install
 
@@ -63,16 +160,33 @@ jobs:
             irm https://raw.githubusercontent.com/${{ github.repository }}/main/install.ps1 | iex
             ```
 
-            Or download the zip below, verify it against `SHA256SUMS.txt`, and
-            put `tattle.exe` somewhere on your `PATH`.
+            Or `winget install --manifest` one of the manifests in this release.
+            Or download `tattle.exe`, check it against `SHA256SUMS.txt`, and put
+            it on your `PATH`.
 
-            ## Verify it does not phone home
+            ## Verify before you run it
+
+            The binary is signed with a short-lived certificate bound to this
+            workflow run, and GitHub attests where it was built. No signing key
+            exists to be stolen.
 
             ```powershell
-            tattle doctor
-            tattle watch --duration 60s
-            tattle report --since 1h --open
+            cosign verify-blob tattle.exe `
+              --signature tattle.exe.sig `
+              --certificate tattle.exe.pem `
+              --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" `
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+            gh attestation verify tattle.exe --repo ${{ github.repository }}
             ```
 
-            The binary makes no outbound connections. The only network code in
-            the product is `tattle lists update`, which you have to ask for.
+            ## Update later
+
+            ```powershell
+            tattle update --check   # report only, changes nothing
+            tattle update           # download, verify, stage; swap by hand
+            ```
+
+            There is no background updater, on purpose: a silent update check is
+            an outbound connection on every run, and an update channel is the
+            most valuable thing in the program to compromise.

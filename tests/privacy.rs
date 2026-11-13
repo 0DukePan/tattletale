@@ -28,10 +28,12 @@ fn source_files() -> Vec<PathBuf> {
 }
 
 #[test]
-fn only_the_list_loader_has_an_http_client() {
-    // `ureq` is the only network dependency. It is allowed in exactly one
-    // module, the one the user has to invoke explicitly.
-    const ALLOWED: &str = "classify.rs";
+fn only_two_modules_can_open_a_socket() {
+    // `ureq` is the only network dependency, and it lives in exactly two
+    // modules: the list loader and the updater. Both exist only behind a
+    // command the user types. A third one appearing is a product change, not a
+    // refactor.
+    let allowed = tattletale::commands::update::NETWORK_MODULES;
 
     let mut offenders = Vec::new();
     for path in source_files() {
@@ -39,7 +41,7 @@ fn only_the_list_loader_has_an_http_client() {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or_default();
-        if name == ALLOWED {
+        if allowed.contains(&name) {
             continue;
         }
         let text = std::fs::read_to_string(&path).expect("source file must be readable");
@@ -50,9 +52,43 @@ fn only_the_list_loader_has_an_http_client() {
 
     assert!(
         offenders.is_empty(),
-        "these modules gained an HTTP client; the product promises there is only one, \
-         and only behind `tattle lists update`: {offenders:#?}"
+        "these modules gained an HTTP client; the only two allowed are {allowed:?}: {offenders:#?}"
     );
+}
+
+#[test]
+fn the_collection_loop_never_touches_the_network() {
+    // The promise is not "no network anywhere", it is "no network while
+    // collecting". `watch` runs for minutes at a time, so a request hidden in
+    // that path would be the worst possible place for one.
+    for module in [
+        "src/watch.rs",
+        "src/live.rs",
+        "src/resolve.rs",
+        "src/dns/mod.rs",
+    ] {
+        let text = std::fs::read_to_string(module).expect("source file must be readable");
+        for forbidden in ["ureq", "TcpStream::connect", "UdpSocket::bind"] {
+            assert!(
+                !text.contains(forbidden),
+                "{module} uses {forbidden}: collection must never open a socket"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_default_command_stays_offline() {
+    // The bare invocation runs the live view. If that ever grew a network call,
+    // the product's central claim would be false for the way it is actually used.
+    let main = std::fs::read_to_string("src/main.rs").expect("main.rs");
+    assert!(
+        main.contains("commands::live::run"),
+        "the default command must remain the offline live view"
+    );
+    for command in ["commands::lists::", "commands::update::"] {
+        assert!(main.contains(command), "main.rs should dispatch {command}");
+    }
 }
 
 #[test]

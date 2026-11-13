@@ -138,6 +138,16 @@ enum Command {
         yes: bool,
     },
 
+    /// Check for a newer release, and optionally fetch it.
+    ///
+    /// This is the only command that talks to the internet on your behalf, and
+    /// it only runs when you type it. Nothing is installed automatically.
+    Update {
+        /// Only report whether a newer release exists.
+        #[arg(long)]
+        check: bool,
+    },
+
     /// Print the environment and check that collection can work here.
     Doctor,
 }
@@ -212,6 +222,9 @@ fn run() -> anyhow::Result<()> {
             }
             let mut input = BufReader::new(std::io::stdin());
             commands::purge::run(&mut out, &mut input, db, yes)?;
+        }
+        Some(Command::Update { check }) => {
+            commands::update::run(&mut out, check, now)?;
         }
         Some(Command::Doctor) => {
             commands::doctor::run(&mut out, db, cli.no_color, now)?;
