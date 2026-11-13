@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.1] - 2026-11-13
+
 ### Added
 
 - **Keyless release signing and build provenance.** Every artifact is signed by
@@ -51,7 +55,7 @@ All notable changes to this project are documented here. The format follows
   answer that arrived two ticks later was filtered out. That is why enrichment
   only appeared to work when the resolver cache already held the name.
 
-### Planned for v0.1.1
+### Planned for v0.2.0
 
 - Read the browsers' own DNS caches, which would recover hostnames rather than
   just owners, and remove the need for the flag entirely.
@@ -99,5 +103,6 @@ First release. Windows 10/11, standard user, no elevation.
 - **Unencrypted database.** It contains a record of your traffic and relies on
   the filesystem permissions of your user profile.
 
-[Unreleased]: https://github.com/0DukePan/tattletale/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/0DukePan/tattletale/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/0DukePan/tattletale/releases/tag/v0.1.1
 [0.1.0]: https://github.com/0DukePan/tattletale/releases/tag/v0.1.0

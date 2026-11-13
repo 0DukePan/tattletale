@@ -26,6 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A tag that disagrees with Cargo.toml ships a binary that reports the
+      # wrong version, and `tattle update` would then offer the same update on
+      # every run, forever. Fail here rather than publish that.
+      - name: Check the tag matches the crate version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          crate=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\([^"]*\)".*/\1/')
+          echo "tag=$tag crate=$crate"
+          if [ "$tag" != "$crate" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${crate}"
+            exit 1
+          fi
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
