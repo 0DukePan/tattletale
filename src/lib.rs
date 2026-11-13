@@ -11,6 +11,7 @@
 //! * [`report`] â€” HTML receipt rendering, a pure function of a report model
 //! * [`platform`] â€” the only OS-specific code (Windows collectors)
 
+pub mod bench;
 pub mod classify;
 pub mod commands;
 pub mod demo;

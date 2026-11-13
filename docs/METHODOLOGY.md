@@ -141,6 +141,48 @@ would not be. An address with no PTR record stays unknown, which is common
 enough that coverage remains partial — the feature raises the floor, it does not
 close the gap.
 
+## How accuracy is measured
+
+Coverage and accuracy are different questions, and this project spent a while
+answering only the first. `tattle bench` answers the second.
+
+Nine scenarios, each a case the engine was written to survive, with the correct
+answer recorded by hand:
+
+| Scenario | What it tests |
+|---|---|
+| direct | the ordinary case, one name resolved just before the connection |
+| shared-address | two applications on one address, one resolver answer |
+| shared-cdn | two names for one address, as a CDN actually looks |
+| expired-entry | a name resolved far outside the window: unknowable |
+| two-names-one-ip | ambiguity, where either answer is defensible |
+| doh-with-ptr | traffic that bypassed the resolver, recovered by reverse DNS |
+| doh-no-ptr | the same, with nothing to recover |
+| reconnect | a client that resolves again before reconnecting |
+| ptr-does-not-outrank | a reverse answer must lose to a real hostname |
+
+Scoring:
+
+- **precision** — of the names offered, how many were right
+- **recall** — of the names knowable, how many were found
+- **false positives** — named something that was not there. The failure that
+  would get this tool discredited, tracked separately and required to be zero.
+- **wrong but high** — claimed confidence and was wrong. Worse than a miss.
+- **demoted for contention** — how often a shared address was correctly
+  reported as `probable` rather than `high`.
+
+That last counter exists because of a bug the benchmark found. Scoring only
+correctness let a mutation through: disabling contention detection entirely
+still scored 100%, because the site was right even though the confidence was a
+lie. The benchmark now reads the tier as well as the site.
+
+### What the benchmark cannot see
+
+It runs the engine against recorded evidence, so it measures the *decision*, not
+the *collection*. A bug that records the wrong address, or misses a connection
+between polls, would score perfectly here. Those are covered by the live tests
+and by the collector's own tests instead.
+
 ## What the numbers mean
 
 - **connections** counts *opens*, not polls. A socket sampled every second for

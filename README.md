@@ -143,6 +143,7 @@ tattle demo                 # a labelled example, before recording anything
 | `tattle demo` | A clearly labelled synthetic day |
 | `tattle lists update` | Download public tracker lists — the only outbound request |
 | `tattle lists status` | Show which lists are loaded and where they came from |
+| `tattle bench` | Score the attribution against labelled scenarios |
 | `tattle doctor` | Check whether this machine can be measured |
 | `tattle block` | Turn flagged domains into a hosts-file fragment you apply |
 | `tattle update --check` | Ask the release feed whether a newer version exists |
@@ -176,6 +177,25 @@ Every row carries a confidence tier, and the tier is always shown:
 
 **It would rather say "unknown" than invent a name.** A privacy report that
 accuses the wrong application is worse than no report at all.
+
+### Measured, not asserted
+
+`tattle bench` runs nine labelled scenarios where the answer is known — shared
+CDN addresses, expired cache entries, CNAME chains, DoH traffic with and without
+a reverse record, reconnecting clients — and scores precision and recall against
+the labels:
+
+```
+  precision        100.0%   of the names offered, how many were right
+  recall           100.0%   of the names knowable, how many were found
+  false positives  0        none: the tool never named something that was not there
+  wrong but high   0        no confident answer was wrong
+```
+
+The scenarios are deliberately adversarial, and the benchmark is checked for
+*vacuity*: disabling contention detection makes it fail. It measures correctness
+and confidence, not coverage — "85% unnamed" and "100% of what was named was
+right" are different claims, and only the second one matters.
 
 ### The DNS-over-HTTPS blind spot, and what can be recovered
 

@@ -101,7 +101,7 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
 
     // Every (time, app) that claimed an address, so contention is judged
     // against the actual window rather than against a fixed bucket.
-    let mut claimed: HashMap<&str, Vec<(i64, i64)>> = HashMap::new();
+    let mut claimed: HashMap<&str, Vec<(i64, i64, i64)>> = HashMap::new();
 
     let mut decisions = Vec::with_capacity(pending.len());
 
@@ -154,11 +154,44 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
         // connecting to the same CDN address a second apart could land in
         // different buckets and both be reported `High`, which is exactly the
         // shared-address case the tier exists to catch.
+        //
+        // Contention is two-sided. The first claimant used to stay `High` and
+        // only the second was demoted, which is incoherent: the name does not
+        // say *which* application it was for, so neither of them knows. Both
+        // are reported `Probable`, and the first is corrected when the second
+        // arrives.
         let claims = claimed.entry(conn.ip.as_str()).or_default();
         let contended = claims
             .iter()
-            .any(|(at, app)| *app != conn.app_id && (at - conn.at).abs() <= WINDOW_SECONDS);
-        claims.push((conn.at, conn.app_id));
+            .any(|(at, app, _)| *app != conn.app_id && (at - conn.at).abs() <= WINDOW_SECONDS);
+
+        if contended && !claims.is_empty() && candidates.len() == 1 {
+            // Demote the claim already recorded, if this is a genuine contest
+            // over one name. A record with several candidates was never `High`
+            // to begin with.
+            let earlier: Vec<i64> = claims
+                .iter()
+                .filter(|(_, app, _)| *app != conn.app_id)
+                .map(|(_, _, id)| *id)
+                .collect();
+            for conn_id in earlier {
+                if let Some(previous) = decisions
+                    .iter_mut()
+                    .find(|d: &&mut Decision| d.conn_id == conn_id)
+                {
+                    if previous.tier == Tier::High {
+                        previous.tier = Tier::Probable;
+                        previous.method = "address-shared-between-apps".to_string();
+                        for attribution in &mut previous.attributions {
+                            attribution.tier = Tier::Probable;
+                            attribution.method = "address-shared-between-apps".to_string();
+                        }
+                    }
+                }
+            }
+        }
+
+        claims.push((conn.at, conn.app_id, conn.conn_id));
 
         let (tier, method) = match (candidates.len(), contended) {
             (1, false) => (Tier::High, "single-candidate"),
@@ -328,10 +361,12 @@ mod tests {
             &[conn(1, 7, "1.2.3.4", 1001), conn(2, 9, "1.2.3.4", 1002)],
             &observations,
         );
+        // Contention is two-sided: the name does not say which application it
+        // was for, so neither of them may claim `high`.
         assert_eq!(
             decisions[0].tier,
-            Tier::High,
-            "the first claim is unopposed"
+            Tier::Probable,
+            "the first claim is demoted once a second app is seen"
         );
         assert_eq!(
             decisions[1].tier,
@@ -353,8 +388,8 @@ mod tests {
         );
         assert_eq!(
             decisions[0].tier,
-            Tier::High,
-            "the first claim is unopposed"
+            Tier::Probable,
+            "the first claim is demoted once the second app is seen"
         );
         assert_eq!(
             decisions[1].tier,

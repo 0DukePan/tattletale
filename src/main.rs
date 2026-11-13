@@ -148,6 +148,9 @@ enum Command {
         check: bool,
     },
 
+    /// Measure how often the attribution is right, against labelled scenarios.
+    Bench,
+
     /// Print the environment and check that collection can work here.
     Doctor,
 }
@@ -225,6 +228,9 @@ fn run() -> anyhow::Result<()> {
         }
         Some(Command::Update { check }) => {
             commands::update::run(&mut out, check, now)?;
+        }
+        Some(Command::Bench) => {
+            commands::accuracy::run(&mut out)?;
         }
         Some(Command::Doctor) => {
             commands::doctor::run(&mut out, db, cli.no_color, now)?;

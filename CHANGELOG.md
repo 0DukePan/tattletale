@@ -6,7 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`tattle bench`** — measures precision, recall and accuracy against nine
+  labelled scenarios instead of reporting how many connections carried a name.
+  It counts false positives and wrong-but-confident answers separately, and a
+  test asserts both stay at zero.
+
+### Fixed
+
+- **Shared addresses only demoted the second application.** The first claimant
+  stayed `high` even when a second application was then seen using the same
+  address, which is incoherent: the resolver's answer does not say which
+  application it was for, so neither of them may claim confidence. Both are now
+  reported `probable`. Found by the new benchmark, not by a user.
 
 ## [0.1.1] - 2026-11-13
 
