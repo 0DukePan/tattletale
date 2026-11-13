@@ -99,10 +99,11 @@ tattle demo                 # a labelled example, before recording anything
 | `tattle lists update` | Download public tracker lists — the only outbound request |
 | `tattle lists status` | Show which lists are loaded and where they came from |
 | `tattle doctor` | Check whether this machine can be measured |
+| `tattle block` | Turn flagged domains into a hosts-file fragment you apply |
 | `tattle purge` | Delete everything it has recorded |
 | `tattle top --json` | Machine-readable output for scripts |
 
-Global flags: `--db <PATH>`, `--json`, `--no-color`.
+Global flags: `--db <PATH>`, `--json`, `--no-color`, `--reverse-dns`.
 
 ## How it works
 
@@ -130,18 +131,40 @@ Every row carries a confidence tier, and the tier is always shown:
 **It would rather say "unknown" than invent a name.** A privacy report that
 accuses the wrong application is worse than no report at all.
 
-### The known blind spot
+### The DNS-over-HTTPS blind spot, and what can be recovered
 
 Browsers using DNS over HTTPS resolve names inside their own process. Those
 lookups never reach the Windows resolver cache, so their connections arrive as
-bare addresses.
+bare addresses. On the machine this was built on, that left **15%** of
+connections named.
 
-The tool does not hide this. The receipt reports the fraction of connections it
-could name, next to the headline numbers, and names the applications bypassing
-the system resolver. On the machine this was built on, that figure was **15%**.
+The tool does not hide this: the receipt reports the fraction it could name,
+next to the headline numbers, and names the applications bypassing the resolver.
 
-Recovering browser lookups is the first item in
-[v0.1.1](CHANGELOG.md#unreleased).
+Part of it is recoverable, because the *owner* of an address is a property of
+the address rather than of how it was resolved. `142.250.75.238` has a PTR
+record pointing into `1e100.net`, and that is Google whoever asked.
+
+```powershell
+tattle watch --duration 10m --reverse-dns
+```
+
+In a controlled test — connecting to four bare addresses, which is exactly what
+DoH traffic looks like to this tool, with the resolver cache flushed first —
+naming went from **0 of 4 to 4 of 4**:
+
+| | named |
+|---|---|
+| without `--reverse-dns` | 0 of 4 |
+| with `--reverse-dns` | 4 of 4 — `1e100.net`, `dns.google`, `github.com`, `one.one` |
+
+Every one of those is `●○○ probable`, never `high`: a reverse lookup names the
+owner of an address, not the site an application asked for, and the tool will
+not pretend otherwise.
+
+**It is off by default, on purpose.** A reverse lookup tells your resolver which
+addresses this machine is talking to — precisely the fact DoH was hiding. That
+trade is yours to make, which is why it is a flag and not a default.
 
 ## Privacy
 
@@ -170,14 +193,24 @@ standard user. The exact-confidence tier needs ETW and therefore elevation,
 which is why v0.1 does not offer it.
 
 **Does it block trackers?**
-No. It reports. Blocking is a different product with a different failure mode.
+It does not enforce anything, and that is deliberate: a blocker needs elevation
+and a filter driver, and it inherits a failure mode this project will not own —
+silently breaking an application with no way to tell why.
+
+`tattle block` produces the artefact a blocker would need, a hosts-file fragment
+for the domains actually flagged on this machine, so you can see what you are
+about to break and undo it in a text editor.
 
 **Why is the "named" percentage low on my machine?**
 Because your browser resolves over HTTPS. See [the blind spot](#the-known-blind-spot).
 
 **Does it work on macOS or Linux?**
-Not yet. The engine is portable; the collectors are not. The `Collector` seam
-exists for this and is the largest piece of available work.
+No. Collection is Windows-only, and so is the crate: the recording loop is bound
+to the Windows collector, which means the library does not currently compile on
+other platforms. The attribution engine, the store and the receipt are
+platform-neutral and sit behind a `ConnectionSource` trait, so a port is a new
+source implementation plus removing that binding — not a rewrite. It is the
+largest piece of available work and it is not started.
 
 **Is it a spyware detector?**
 No. It has no access to content, only to the metadata Windows keeps about
@@ -188,7 +221,7 @@ connections, and it does not judge applications — only the domains they contac
 Early but functional: collector, DNS parser, attribution engine, SQLite and
 in-memory stores, HTML receipt, live view, tracker lists, demo mode, purge.
 
-- 106 tests; `cargo clippy --all-targets -- -D warnings` clean
+- 183 tests; `cargo clippy --all-targets -- -D warnings` clean
 - Verified against live Windows machines, not only against fixtures
 - 72,999 tracker rules from OISD and EasyList; a 110-rule seed works offline
 - [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — how attribution works and where it fails

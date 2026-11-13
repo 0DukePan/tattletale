@@ -170,6 +170,28 @@ pub fn parse_entries(text: &str) -> Vec<Entry> {
 /// separate A block that carries the address, and that block is what gets
 /// joined against a connection.
 fn to_records(entry: Entry, now: i64) -> Vec<DnsRecord> {
+    // A PTR block is kept, not dropped: it is a name for an address that this
+    // machine already paid to resolve, and it is the only evidence available
+    // for traffic that bypassed the cache.
+    if entry.rtype == TYPE_PTR {
+        let (Some(name), Some(address)) = (entry.ptr.clone(), arpa_to_ipv4(&entry.host)) else {
+            return Vec::new();
+        };
+        if !crate::dns::reverse::is_usable(&name, &address) {
+            return Vec::new();
+        }
+        return vec![DnsRecord {
+            host: name,
+            ip: address,
+            rtype: TYPE_PTR,
+            section: entry.section,
+            ttl: entry.ttl,
+            first_seen: now,
+            last_seen: now,
+            source: DnsSource::Ipconfig,
+        }];
+    }
+
     let mut out = Vec::new();
     let (Some(address), true) = (entry.address.clone(), matches!(entry.rtype, 1 | TYPE_AAAA))
     else {
@@ -189,6 +211,24 @@ fn to_records(entry: Entry, now: i64) -> Vec<DnsRecord> {
         source: DnsSource::Ipconfig,
     });
     out
+}
+
+/// Convert `5.113.0.203.in-addr.arpa` into `203.0.113.5`.
+///
+/// PTR blocks key on the reversed address, which is how the answer was asked
+/// for; everything downstream wants the address itself.
+fn arpa_to_ipv4(arpa: &str) -> Option<String> {
+    let name = arpa.trim_end_matches('.').strip_suffix(".in-addr.arpa")?;
+    let mut octets: Vec<&str> = name.split('.').collect();
+    if octets.len() != 4 {
+        return None;
+    }
+    octets.reverse();
+    let address = octets.join(".");
+    address
+        .parse::<std::net::Ipv4Addr>()
+        .ok()
+        .map(|ip| ip.to_string())
 }
 
 /// A block is complete once it has a type and something to say.

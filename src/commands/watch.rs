@@ -13,6 +13,7 @@ pub fn run(
     db: Option<&Path>,
     duration: &str,
     now: i64,
+    reverse_dns: bool,
 ) -> anyhow::Result<TickStats> {
     let span = parse_window(duration)?;
     let db_path = paths::db_path(db);
@@ -23,7 +24,7 @@ pub fn run(
     }
 
     let store = SqliteStore::open(&db_path)?;
-    let mut watcher = Watcher::new(store);
+    let mut watcher = Watcher::new(store).with_reverse_dns(reverse_dns);
     let started = now;
 
     writeln!(out, "recording for {duration} into {}", db_path.display())?;
@@ -78,7 +79,7 @@ mod tests {
         let db = dir.path().join("t.db");
         let mut sink = Vec::new();
 
-        let err = run(&mut sink, Some(&db), "5x", 0).unwrap_err();
+        let err = run(&mut sink, Some(&db), "5x", 0, false).unwrap_err();
         assert!(err.to_string().contains("unknown unit"), "got: {err}");
         assert!(!db.exists(), "a bad argument must not create a database");
         assert!(sink.is_empty(), "nothing printed on failure");
@@ -88,6 +89,6 @@ mod tests {
     fn a_zero_duration_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         let mut sink = Vec::new();
-        assert!(run(&mut sink, Some(&dir.path().join("t.db")), "0s", 0).is_err());
+        assert!(run(&mut sink, Some(&dir.path().join("t.db")), "0s", 0, false).is_err());
     }
 }

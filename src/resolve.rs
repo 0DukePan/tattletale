@@ -86,6 +86,19 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
         by_ip.entry(record.ip.as_str()).or_default().push(record);
     }
 
+    // Reverse-DNS answers are indexed separately. They name whoever owns the
+    // address, not the site the application asked for, so they are a weaker
+    // tier and must never outrank a real hostname.
+    let mut ptr_by_ip: HashMap<&str, Vec<&DnsRecord>> = HashMap::new();
+    for record in observations {
+        if record.rtype == crate::dns::TYPE_PTR {
+            ptr_by_ip
+                .entry(record.ip.as_str())
+                .or_default()
+                .push(record);
+        }
+    }
+
     // Every (time, app) that claimed an address, so contention is judged
     // against the actual window rather than against a fixed bucket.
     let mut claimed: HashMap<&str, Vec<(i64, i64)>> = HashMap::new();
@@ -96,12 +109,41 @@ pub fn resolve(pending: &[Pending], observations: &[DnsRecord]) -> Vec<Decision>
         let candidates = candidates_for(conn, by_ip.get(conn.ip.as_str()));
 
         if candidates.is_empty() {
+            // No hostname was resolved. Before giving up, fall back to whoever
+            // owns the address: that is what reverse DNS knows, and it is the
+            // only evidence available for traffic that bypassed the resolver.
+            let owners = ptr_by_ip.get(conn.ip.as_str());
+            let attributions: Vec<Attribution> = owners
+                .map(|records| {
+                    records
+                        .iter()
+                        .take(MAX_CANDIDATES)
+                        .map(|record| Attribution {
+                            conn_id: conn.conn_id,
+                            host: record.host.clone(),
+                            site: site_of(&record.host),
+                            tier: Tier::Probable,
+                            method: "reverse-dns-owner".to_string(),
+                            at: conn.at,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let (tier, method) = if attributions.is_empty() {
+                (Tier::Unknown, "no-dns-observation")
+            } else {
+                // The owner is known; the specific site is not. Probable is the
+                // honest tier: this says "Google", never "google.com".
+                (Tier::Probable, "reverse-dns-owner")
+            };
+
             decisions.push(Decision {
                 conn_id: conn.conn_id,
-                tier: Tier::Unknown,
-                method: "no-dns-observation".to_string(),
+                tier,
+                method: method.to_string(),
                 at: conn.at,
-                attributions: Vec::new(),
+                attributions,
             });
             continue;
         }
@@ -355,15 +397,36 @@ mod tests {
     }
 
     #[test]
-    fn only_address_records_become_candidates() {
-        let mut txt = obs("example.com", "1.2.3.4", 1000);
-        txt.rtype = 12;
-        let decisions = resolve(&[conn(1, 7, "1.2.3.4", 1010)], &[txt]);
+    fn a_reverse_lookup_names_the_owner_but_never_as_confidently_as_a_hostname() {
+        // A PTR answer says who owns the address, not which site the app asked
+        // for. It is a fallback for traffic that bypassed the resolver, and it
+        // must never reach `High`: that would claim knowledge we do not have.
+        let mut ptr = obs("xx.1e100.net", "1.2.3.4", 1000);
+        ptr.rtype = 12;
+
+        let decisions = resolve(&[conn(1, 7, "1.2.3.4", 1010)], &[ptr]);
+        assert_eq!(decisions[0].tier, Tier::Probable);
+        assert_eq!(decisions[0].method, "reverse-dns-owner");
+        assert_eq!(decisions[0].attributions[0].host, "xx.1e100.net");
+        assert_eq!(decisions[0].attributions[0].site, "1e100.net");
+    }
+
+    #[test]
+    fn a_real_hostname_outranks_a_reverse_lookup() {
+        // When both exist, the name the resolver actually saw wins, and the
+        // reverse answer is not offered as a second candidate.
+        let mut ptr = obs("xx.1e100.net", "1.2.3.4", 999);
+        ptr.rtype = 12;
+        let hostname = obs("api.example.com", "1.2.3.4", 1000);
+
+        let decisions = resolve(&[conn(1, 7, "1.2.3.4", 1010)], &[hostname, ptr]);
+        assert_eq!(decisions[0].tier, Tier::High);
         assert_eq!(
-            decisions[0].tier,
-            Tier::Unknown,
-            "a PTR record is not an address answer"
+            decisions[0].attributions.len(),
+            1,
+            "only the hostname is offered"
         );
+        assert_eq!(decisions[0].attributions[0].host, "api.example.com");
     }
 
     #[test]

@@ -283,6 +283,9 @@ pub enum DnsSource {
     Etw,
     /// A recorded fixture replayed by `tattle replay`.
     Replay,
+    /// A reverse lookup this tool performed on purpose, because the forward
+    /// lookup was hidden from the system resolver.
+    ReverseDns,
 }
 
 impl DnsSource {
@@ -291,6 +294,7 @@ impl DnsSource {
             DnsSource::Ipconfig => "ipconfig",
             DnsSource::Etw => "etw",
             DnsSource::Replay => "replay",
+            DnsSource::ReverseDns => "reverse",
         }
     }
 
@@ -298,6 +302,7 @@ impl DnsSource {
         match value.trim().to_ascii_lowercase().as_str() {
             "etw" => DnsSource::Etw,
             "replay" => DnsSource::Replay,
+            "reverse" => DnsSource::ReverseDns,
             _ => DnsSource::Ipconfig,
         }
     }

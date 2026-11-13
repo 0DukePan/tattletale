@@ -246,6 +246,16 @@ td.flagged { color: var(--danger); }
   border: 1px solid currentColor;
 }
 
+.owner {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
 .chip.tracker, .chip.ads { color: var(--danger); }
 .chip.analytics { color: var(--accent); }
 

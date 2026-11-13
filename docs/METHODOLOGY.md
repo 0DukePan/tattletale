@@ -106,6 +106,41 @@ This is a deliberate v0.1 choice: ship honest, then recover the names. v0.1.1
 adds reads of the browsers' own DNS caches, which is the correct fix for this
 specific blind spot rather than a guess layered on top of it.
 
+## Reverse DNS: naming the owner, not the site
+
+When no hostname explains a connection, there is still one thing knowable: who
+owns the address. `142.250.75.238` has a PTR record pointing into `1e100.net`,
+and that is Google regardless of how the application resolved the name.
+
+`--reverse-dns` performs that lookup. It is a separate, weaker tier, and the
+distinction matters:
+
+| Evidence | Says | Tier |
+|---|---|---|
+| `api.example.com → 1.2.3.4` seen in the resolver cache | the application asked for that host | ●●○ high |
+| `1.2.3.4 → xx.1e100.net` from a PTR record | the address belongs to Google | ●○○ probable |
+
+A PTR answer is never allowed to become `high`, and never competes with a real
+hostname: when both exist, the hostname wins and the reverse answer is discarded
+rather than offered as a second candidate. Both rules have tests.
+
+### Why it is opt-in
+
+A reverse lookup asks *your resolver* about *an address you connected to*. For
+traffic that used DNS over HTTPS, that is exactly the association the browser
+went out of its way to hide. Doing it silently would be a privacy tool leaking
+the thing it claims to protect.
+
+So it is a flag, the receipt does not mention it as a default, and `doctor`
+reports whether collection is running with it.
+
+### What it cannot do
+
+It recovers the organisation, not the site. "Google" is honest; "google.com"
+would not be. An address with no PTR record stays unknown, which is common
+enough that coverage remains partial — the feature raises the floor, it does not
+close the gap.
+
 ## What the numbers mean
 
 - **connections** counts *opens*, not polls. A socket sampled every second for

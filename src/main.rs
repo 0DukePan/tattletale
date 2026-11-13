@@ -36,6 +36,13 @@ struct Cli {
     #[arg(long, global = true)]
     json: bool,
 
+    /// Name addresses by owner when no hostname explains them.
+    ///
+    /// This asks your resolver about addresses that bypassed it, which is
+    /// information DNS over HTTPS was hiding. Off by default.
+    #[arg(long, global = true)]
+    reverse_dns: bool,
+
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -109,6 +116,21 @@ enum Command {
         since: String,
     },
 
+    /// Turn flagged domains into a hosts-file fragment you can apply.
+    Block {
+        /// Window to cover.
+        #[arg(long, default_value = "24h")]
+        since: String,
+
+        /// Write the fragment here instead of stdout.
+        #[arg(long, value_name = "PATH")]
+        out: Option<PathBuf>,
+
+        /// Append instead of overwriting. Never touches existing lines.
+        #[arg(long)]
+        append: bool,
+    },
+
     /// Delete everything this tool has recorded.
     Purge {
         /// Skip the confirmation prompt.
@@ -147,7 +169,7 @@ fn run() -> anyhow::Result<()> {
 
     match cli.command {
         None => {
-            commands::live::run(&mut out, db)?;
+            commands::live::run(&mut out, db, cli.reverse_dns)?;
         }
         Some(Command::Report {
             since,
@@ -160,7 +182,7 @@ fn run() -> anyhow::Result<()> {
             }
         }
         Some(Command::Watch { duration }) => {
-            commands::watch::run(&mut out, db, &duration, now)?;
+            commands::watch::run(&mut out, db, &duration, now, cli.reverse_dns)?;
         }
         Some(Command::Demo { out: target, open }) => {
             commands::demo::run(&mut out, target.as_deref(), now, open)?;
@@ -170,6 +192,13 @@ fn run() -> anyhow::Result<()> {
         }
         Some(Command::App { name, since }) => {
             commands::app::run(&mut out, db, &name, &since, now)?;
+        }
+        Some(Command::Block {
+            since,
+            out: target,
+            append,
+        }) => {
+            commands::block::run(&mut out, db, &since, target.as_deref(), append, now)?;
         }
         Some(Command::Purge { yes }) => {
             // The prompt has to go somewhere a user can see. When stdin is not

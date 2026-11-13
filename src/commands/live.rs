@@ -9,7 +9,7 @@ use crate::store::sqlite::SqliteStore;
 use crate::watch::Watcher;
 
 /// Run the live view until interrupted, then point at the next command.
-pub fn run(out: &mut dyn Write, db: Option<&Path>) -> anyhow::Result<Frame> {
+pub fn run(out: &mut dyn Write, db: Option<&Path>, reverse_dns: bool) -> anyhow::Result<Frame> {
     let db_path = paths::db_path(db);
     if let Some(parent) = db_path.parent() {
         if !parent.as_os_str().is_empty() {
@@ -18,7 +18,7 @@ pub fn run(out: &mut dyn Write, db: Option<&Path>) -> anyhow::Result<Frame> {
     }
 
     let store = SqliteStore::open(&db_path)?;
-    let frame = crate::live::run(Watcher::new(store))?;
+    let frame = crate::live::run(Watcher::new(store).with_reverse_dns(reverse_dns))?;
 
     writeln!(out)?;
     writeln!(out, "  {}\n", frame.closing_hint())?;

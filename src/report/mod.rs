@@ -263,12 +263,20 @@ fn app_cards(out: &mut String, model: &ReportModel) {
             out.push_str("<ul class=\"sites\">\n");
             for site in row.top_sites.iter() {
                 let chip = category_chip(site.category);
+                // A reverse-DNS answer names the owner of an address, not a
+                // site. Showing "Google" beside "1e100.net" is honest; showing
+                // "google.com" would not be.
+                let owner = match crate::dns::reverse::owner_of(&site.host) {
+                    Some(name) => format!("<span class=\"owner\">{}</span>", esc(name)),
+                    None => String::new(),
+                };
                 let _ = writeln!(
                     out,
-                    "<li><span class=\"site\">{}</span>{}<span class=\"n\">{}</span></li>",
+                    "<li><span class=\"site\">{}</span>{}<span class=\"n\">{}</span>{}</li>",
                     esc(&site.site),
                     chip,
-                    site.connections
+                    site.connections,
+                    owner
                 );
             }
             out.push_str("</ul>\n");

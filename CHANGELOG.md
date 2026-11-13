@@ -6,10 +6,38 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`--reverse-dns`** — names the owner of an address when no hostname explains
+  it, which is the only thing that can be recovered for traffic that bypassed
+  the system resolver. In a controlled test with a flushed cache, four
+  connections to bare addresses went from 0 named to 4 named. Off by default,
+  because it tells the local resolver which addresses this machine is using.
+- **A reverse-DNS confidence tier.** A PTR answer names the owner of an address,
+  not the site an application asked for, so it is always `probable` and never
+  outranks a real hostname. There is a test for exactly that.
+- **`tattle block`** — writes a hosts-file fragment for the domains flagged on
+  this machine, with a header, an explanation of how to apply it, and how to
+  undo it. It does not modify the hosts file and never asks for elevation.
+- **`docs/METHODOLOGY.md`** now documents the reverse-DNS tier alongside the
+  others.
+
+### Fixed
+
+- Reverse lookups ran inside the collection tick and stalled the one-second
+  poll: a single slow resolver made the tool miss connections in order to
+  describe them. They now run on threads of their own, with the collection loop
+  reading whatever has arrived.
+- A single shared worker thread queued every lookup behind the slowest one, so
+  one timing-out address silenced the feature. Lookups are now concurrent.
+- The observation window was anchored to the connection's timestamp, so an
+  answer that arrived two ticks later was filtered out. That is why enrichment
+  only appeared to work when the resolver cache already held the name.
+
 ### Planned for v0.1.1
 
-- Read the browsers' own DNS caches, so DNS-over-HTTPS lookups become visible.
-  This is the largest accuracy gap in v0.1 and the first thing to fix.
+- Read the browsers' own DNS caches, which would recover hostnames rather than
+  just owners, and remove the need for the flag entirely.
 
 ## [0.1.0] - 2026-11-12
 

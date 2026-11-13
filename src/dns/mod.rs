@@ -8,6 +8,7 @@
 
 pub mod cache;
 pub mod ipconfig;
+pub mod reverse;
 
 /// Record types we keep. CNAME (5) and MX (15) describe the query, not an
 /// address, and are dropped after they have been used to follow the chain.

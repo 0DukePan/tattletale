@@ -71,8 +71,87 @@ pub struct Watcher<S: Store, C: ConnectionSource, N: NameSource> {
     dns: CacheTracker,
     last_dns_poll: Option<Instant>,
     ticks_since_prune: u64,
+    /// The reverse-DNS worker, when enrichment is enabled. Off by default: see
+    /// `dns::reverse`.
+    reverse: Option<ReverseWorker>,
 }
 
+/// A PTR observation for `ip`, tagged with the fact that this tool asked.
+fn ptr_record(name: &str, ip: &str, now: i64) -> DnsRecord {
+    DnsRecord {
+        host: name.to_string(),
+        ip: ip.to_string(),
+        rtype: crate::dns::TYPE_PTR,
+        section: crate::model::DnsSection::Ptr,
+        ttl: 0,
+        first_seen: now,
+        last_seen: now,
+        source: crate::model::DnsSource::ReverseDns,
+    }
+}
+
+/// Performs reverse lookups without blocking the collection loop.
+///
+/// One request gets one short-lived thread rather than a shared queue. A single
+/// worker was tried first and it was worse than useless: one address whose
+/// reverse lookup timed out blocked every diagnosis queued behind it, so the
+/// feature appeared to do nothing at all.
+struct ReverseWorker {
+    outgoing: std::sync::mpsc::Sender<(String, Option<String>)>,
+    answers: std::sync::mpsc::Receiver<(String, Option<String>)>,
+    in_flight: std::collections::HashSet<String>,
+    answered: std::collections::HashSet<String>,
+}
+
+/// Ceiling on concurrent lookups, so a screen full of unknown addresses cannot
+/// spawn a thread per connection.
+const MAX_LOOKUPS_IN_FLIGHT: usize = 64;
+
+impl ReverseWorker {
+    fn spawn() -> Self {
+        let (outgoing, answers) = std::sync::mpsc::channel();
+        Self {
+            outgoing,
+            answers,
+            in_flight: std::collections::HashSet::new(),
+            answered: std::collections::HashSet::new(),
+        }
+    }
+
+    /// Ask for a lookup, at most once per address per session.
+    fn request(&mut self, ip: &str) {
+        if self.answered.contains(ip) || self.in_flight.contains(ip) {
+            return;
+        }
+        if self.in_flight.len() >= MAX_LOOKUPS_IN_FLIGHT {
+            return;
+        }
+
+        self.in_flight.insert(ip.to_string());
+        let ip = ip.to_string();
+        let outgoing = self.outgoing.clone();
+        std::thread::spawn(move || {
+            let name = crate::dns::reverse::lookup(&ip);
+            let _ = outgoing.send((ip, name));
+        });
+    }
+
+    /// Answers that arrived since the last call.
+    fn drain(&mut self) -> Vec<(String, Option<String>)> {
+        let ready: Vec<(String, Option<String>)> = self.answers.try_iter().collect();
+        for (ip, _) in &ready {
+            self.in_flight.remove(ip);
+            // An address with no name is answered too: retrying it every second
+            // would build a queue that never drains.
+            self.answered.insert(ip.clone());
+        }
+        ready
+    }
+
+    fn is_answered(&self, ip: &str) -> bool {
+        self.answered.contains(ip)
+    }
+}
 #[cfg(windows)]
 impl<S: Store> Watcher<S, crate::platform::windows::Collector, IpconfigNames> {
     /// The real watcher, reading this machine.
@@ -102,7 +181,21 @@ impl<S: Store, C: ConnectionSource, N: NameSource> Watcher<S, C, N> {
             dns: CacheTracker::new(),
             last_dns_poll: None,
             ticks_since_prune: 0,
+            reverse: None,
         }
+    }
+
+    /// Enable or disable reverse-DNS enrichment.
+    ///
+    /// Off by default: a reverse lookup tells the local resolver which address
+    /// this machine is talking to, which is the fact DNS over HTTPS was hiding.
+    pub fn with_reverse_dns(mut self, enabled: bool) -> Self {
+        self.reverse = if enabled {
+            Some(ReverseWorker::spawn())
+        } else {
+            None
+        };
+        self
     }
 
     pub fn store(&self) -> &S {
@@ -128,9 +221,34 @@ impl<S: Store, C: ConnectionSource, N: NameSource> Watcher<S, C, N> {
             self.store.record_dns(&self.dns.snapshot())?;
         }
 
-        let pending = self.store.pending(256)?;
+        // Collect any reverse lookups that finished since the last tick.
+        //
+        // These run on a worker thread, not here. Doing them inline stalled the
+        // one-second poll: a resolver that takes a second to answer made the
+        // loop miss connections entirely, which is worse than not knowing the
+        // name.
+        if let Some(worker) = self.reverse.as_mut() {
+            for (ip, answer) in worker.drain() {
+                if let Some(name) = answer {
+                    self.store.record_dns(&[ptr_record(&name, &ip, now)])?;
+                }
+            }
+        }
+
+        let mut pending = self.store.pending(256)?;
         if !pending.is_empty() {
-            let observations = self.observations_for(&pending)?;
+            if let Some(worker) = self.reverse.as_mut() {
+                // A connection whose owner is still being looked up waits a tick
+                // rather than being resolved as unknown and never revisited.
+                for connection in &pending {
+                    worker.request(&connection.ip);
+                }
+                pending.retain(|connection| worker.is_answered(&connection.ip));
+            }
+        }
+
+        if !pending.is_empty() {
+            let observations = self.observations_for(&pending, now)?;
             let decisions = resolve::resolve(&pending, &observations);
             stats.resolved = decisions
                 .iter()
@@ -149,7 +267,17 @@ impl<S: Store, C: ConnectionSource, N: NameSource> Watcher<S, C, N> {
     }
 
     /// Observations covering the widest window any pending connection needs.
-    fn observations_for(&self, pending: &[resolve::Pending]) -> anyhow::Result<Vec<DnsRecord>> {
+    ///
+    /// The upper bound is the later of the newest connection and *now*. A
+    /// reverse lookup answers a tick or two after the connection opened, and
+    /// anchoring the window to the connection alone filtered the answer out —
+    /// so enrichment only appeared to work when the resolver cache happened to
+    /// already hold the name.
+    fn observations_for(
+        &self,
+        pending: &[resolve::Pending],
+        now: i64,
+    ) -> anyhow::Result<Vec<DnsRecord>> {
         let Some(first) = pending.iter().map(|p| p.at).min() else {
             return Ok(Vec::new());
         };
@@ -157,7 +285,7 @@ impl<S: Store, C: ConnectionSource, N: NameSource> Watcher<S, C, N> {
             return Ok(Vec::new());
         };
         let from = first - resolve::WINDOW_SECONDS;
-        let to = last + resolve::FORWARD_SLACK_SECONDS;
+        let to = last.max(now) + resolve::FORWARD_SLACK_SECONDS;
         self.store.observations(to, (to - from).max(1))
     }
 

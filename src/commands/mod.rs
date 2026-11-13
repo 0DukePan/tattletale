@@ -8,6 +8,7 @@
 //! `main.rs` keeps only the argument schema, the dispatch, and the exit code.
 
 pub mod app;
+pub mod block;
 pub mod demo;
 pub mod doctor;
 pub mod format;

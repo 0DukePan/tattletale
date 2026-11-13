@@ -23,19 +23,30 @@ fn parses_a_real_capture_after_sanitising() {
     assert_eq!(entries.len(), 38, "the capture contains 38 complete blocks");
     assert!(!records.is_empty(), "the capture contains A records");
 
+    let mut addresses = 0;
+    let mut reverses = 0;
+
     for record in &records {
+        // Address records and reverse lookups survive. A CNAME carries no
+        // address and is still dropped after the chain is followed.
         assert!(
-            record.rtype == 1 || record.rtype == 28,
-            "only address records survive, got type {}",
+            matches!(record.rtype, 1 | 28 | 12),
+            "unexpected record type {} survived",
             record.rtype
         );
+        match record.rtype {
+            12 => reverses += 1,
+            _ => addresses += 1,
+        }
         assert!(
             record.ip.parse::<std::net::IpAddr>().is_ok(),
             "{} is not an address",
             record.ip
         );
+        // A PTR block names an address by design, so the host is a hostname
+        // rather than an arpa key.
         assert!(
-            !tattletale::dns::is_local_name(&record.host),
+            !tattletale::dns::is_local_name(&record.host) || record.rtype == 12,
             "{} is local and should have been filtered",
             record.host
         );
@@ -45,6 +56,13 @@ fn parses_a_real_capture_after_sanitising() {
             "injection time must be honoured"
         );
     }
+
+    assert!(addresses > 0, "the capture contains address records");
+    assert!(
+        reverses > 0,
+        "the capture contains reverse lookups, which are the only evidence available \
+         for traffic that bypassed the resolver"
+    );
 }
 
 #[test]

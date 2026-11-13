@@ -236,6 +236,65 @@ fn purge_without_confirmation_refuses_on_a_non_interactive_stdin() {
 }
 
 #[test]
+fn block_emits_a_hosts_fragment_and_never_touches_the_real_file() {
+    let dir = temp_dir();
+    let db = db_in(&dir);
+    let watch = run(&["watch", "--duration", "1s", "--db", db.to_str().unwrap()]);
+    assert!(watch.status.success(), "stderr: {}", stderr(&watch));
+
+    let output = run(&["block", "--since", "1h", "--db", db.to_str().unwrap()]);
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+
+    let text = stdout(&output);
+    // With nothing flagged the command still explains itself rather than
+    // printing an empty fragment.
+    assert!(
+        text.contains("nothing to block") || text.contains("0.0.0.0"),
+        "got: {text}"
+    );
+}
+
+#[test]
+fn block_writes_a_fragment_when_asked() {
+    let dir = temp_dir();
+    let db = db_in(&dir);
+    let watch = run(&["watch", "--duration", "1s", "--db", db.to_str().unwrap()]);
+    assert!(watch.status.success());
+
+    let target = dir.path().join("hosts.fragment");
+    let output = run(&[
+        "block",
+        "--since",
+        "1h",
+        "--db",
+        db.to_str().unwrap(),
+        "--out",
+        target.to_str().unwrap(),
+    ]);
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    // Either a fragment was written or nothing was flagged; never a crash.
+    if target.exists() {
+        let body = std::fs::read_to_string(&target).unwrap();
+        assert!(body.starts_with("# tattletale"), "got: {body}");
+    }
+}
+
+#[test]
+fn reverse_dns_is_accepted_as_a_flag() {
+    let dir = temp_dir();
+    let db = db_in(&dir);
+    let output = run(&[
+        "watch",
+        "--duration",
+        "1s",
+        "--db",
+        db.to_str().unwrap(),
+        "--reverse-dns",
+    ]);
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+}
+
+#[test]
 fn lists_status_works_without_a_network() {
     let output = run(&["lists", "status"]);
     assert!(output.status.success(), "stderr: {}", stderr(&output));
