@@ -50,6 +50,7 @@ fn main() {
     // GIF does not change just because it was rebuilt on another day.
     let base: i64 = 1_794_500_000;
     let mut store = MemoryStore::new();
+    let mut history: Vec<u64> = Vec::new();
 
     for tick in 1..=FRAMES {
         // One sample per still-open tuple per tick. A connection is "open" for
@@ -116,13 +117,17 @@ fn main() {
         let events = store.events(now - 3600, 20_000).expect("events");
         let health = tattletale::health::assess(&events);
 
+        let connections: usize = apps.iter().map(|a| a.connections as usize).sum();
+        history.push(connections as u64);
+
         let frame = tattletale::live::Frame {
             elapsed: Duration::from_secs(tick as u64),
-            connections: apps.iter().map(|a| a.connections as usize).sum(),
+            connections,
             flagged: apps.iter().map(|a| a.tracked).sum(),
             named: health.named,
             total: health.total,
             apps,
+            history: history.clone(),
         };
 
         println!("<<<FRAME>>>");

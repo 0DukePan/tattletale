@@ -55,21 +55,46 @@ def load_fonts() -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
 
 
 # ---------------------------------------------------------------- parsing
-RE_LIVE = re.compile(
-    r"^tattletale(\s+live\s+)(\d\d:\d\d:\d\d)(\s+)(\d+)(\s+connections\s+)(\d+)"
-    r"(\s+apps\s+)(\d+)(\s+flagged)$"
+RE_TITLE = re.compile(r"^(tattletale)(  live  )(\d\d:\d\d:\d\d)( +)([\u2581-\u2588]*)$")
+RE_COUNTS = re.compile(
+    r"^(\s*)(\d+)( (?:connection|connections))(  \|  )(\d+)( (?:app|apps))"
+    r"(  \|  )(\d+)( flagged)(  \|  )(\d+%)( named)$"
 )
 RE_ROW = re.compile(
-    r"^(  )(.+?)(\s{2,})(\d+)(\s{2,})(\d+)(\s{2,})(\d+)(\s{2,})([●○]+)$"
+    r"^(  )(.+?)(\s+)(\d+)(\s+)(\d+)(\s+)(\d+)(\s+)([\u25cf\u25cb]+)(\s+)([\u2588]*)$"
 )
-RE_HEADER = re.compile(r"^\s+APP\s+CONNS\s+SITES\s+FLAGGED")
-RE_COVERAGE = re.compile(r"^\s+\d+% of connections")
+RE_HEADER = re.compile(r"^\s+APP\s+CONNS\s+SITES\s+FLAGGED\s+CONF\s+LOAD$")
 RE_PROMPT = re.compile(r"^\$ (.*)$")
 RE_RECEIPT = re.compile(r"^\s+receipt written")
 
+BAR = "\u2588"
+
+# Consolas has U+2588 but not the lower eighth blocks, so a copylot sparkline
+# renders as tofu. Substitute a density ramp: the same information, in glyphs
+# every monospace font has.
+SPARK_FALLBACK = {
+    "\u2581": " ",
+    "\u2582": ".",
+    "\u2583": ":",
+    "\u2584": "-",
+    "\u2585": "=",
+    "\u2586": "+",
+    "\u2587": "*",
+    "\u2588": "#",
+}
+
+
+def spark_to_ascii(text: str) -> str:
+    return "".join(SPARK_FALLBACK.get(ch, ch) for ch in text)
+
 
 def segments(line: str, regular) -> list[tuple[str, tuple[int, int, int], bool]]:
-    """Split one output line into coloured runs, preserving spacing exactly."""
+    """Split one output line into coloured runs, preserving spacing exactly.
+
+    The layout is produced by the program, not invented here, so these patterns
+    have to track `src/live.rs`. The rendering is a pure function of the text,
+    which is why the GIF cannot show something the tool does not print.
+    """
     out: list[tuple[str, tuple[int, int, int], bool]] = []
 
     if not line.strip():
@@ -81,18 +106,43 @@ def segments(line: str, regular) -> list[tuple[str, tuple[int, int, int], bool]]
         out.append((prompt.group(1), TEXT, False))
         return out
 
-    live = RE_LIVE.match(line)
-    if live:
-        out.append(("tattletale", ACCENT, True))
-        out.append((live.group(1), DIM, False))
-        out.append((live.group(2), TEXT, False))
-        out.append((live.group(3) + live.group(4), TEXT, False))
-        out.append((live.group(5), DIM, False))
-        out.append((live.group(6), TEXT, False))
-        out.append((live.group(7), DIM, False))
-        out.append((live.group(8), TEXT, False))
-        # The flagged count is the punchline: colour it once it is non-zero.
-        out.append((live.group(9), DANGER if int(live.group(8)) > 0 else DIM, False))
+    title = RE_TITLE.match(line)
+    if title:
+        out.append((title.group(1), ACCENT, True))
+        out.append((title.group(2), DIM, False))
+        out.append((title.group(3), TEXT, False))
+        out.append((title.group(4), DIM, False))
+        out.append((spark_to_ascii(title.group(5)), GREEN, False))
+        return out
+
+    counts = RE_COUNTS.match(line)
+    if counts:
+        (
+            indent,
+            connections,
+            connections_label,
+            pipe1,
+            apps,
+            apps_label,
+            pipe2,
+            flagged,
+            flagged_label,
+            pipe3,
+            coverage,
+            named,
+        ) = counts.groups()
+        out.append((indent, DIM, False))
+        out.append((connections, TEXT, False))
+        out.append((connections_label, DIM, False))
+        out.append((pipe1, DIM, False))
+        out.append((apps, TEXT, False))
+        out.append((apps_label, DIM, False))
+        out.append((pipe2, DIM, False))
+        out.append((flagged, DANGER if int(flagged) > 0 else TEXT, False))
+        out.append((flagged_label, DIM, False))
+        out.append((pipe3, DIM, False))
+        out.append((coverage, DANGER if int(coverage.rstrip("%")) < 50 else TEXT, False))
+        out.append((named, DIM, False))
         return out
 
     if RE_HEADER.match(line):
@@ -101,8 +151,11 @@ def segments(line: str, regular) -> list[tuple[str, tuple[int, int, int], bool]]
 
     row = RE_ROW.match(line)
     if row:
-        indent, name, gap1, conns, gap2, sites, gap3, flagged, gap4, glyph = row.groups()
+        indent, name, gap1, conns, gap2, sites, gap3, flagged, gap4, glyph, gap5, bar = (
+            row.groups()
+        )
         out.append((indent, DIM, False))
+        # A truncated name is the one case where the text is not a real path.
         out.append((name, TEXT, False))
         out.append((gap1, DIM, False))
         out.append((conns, TEXT, False))
@@ -111,18 +164,24 @@ def segments(line: str, regular) -> list[tuple[str, tuple[int, int, int], bool]]
         out.append((gap3, DIM, False))
         out.append((flagged, DANGER if int(flagged) > 0 else DIM, False))
         out.append((gap4, DIM, False))
-        out.append((glyph, GREEN if "●" in glyph else DIM, False))
+        if "\u25cf\u25cf" in glyph:
+            colour = GREEN
+        elif "\u25cf" in glyph:
+            colour = ACCENT
+        else:
+            colour = DIM
+        out.append((glyph, colour, False))
+        out.append((gap5, DIM, False))
+        out.append((bar, GREEN, False))
         return out
 
-    if RE_COVERAGE.match(line) or RE_RECEIPT.match(line):
+    if RE_RECEIPT.match(line):
         out.append((line, DIM, False))
         return out
 
     out.append((line, TEXT, False))
     return out
 
-
-# ---------------------------------------------------------------- drawing
 def text_width(font, text: str) -> int:
     return int(round(font.getlength(text)))
 
