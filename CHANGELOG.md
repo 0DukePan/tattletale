@@ -55,6 +55,15 @@ Nothing yet.
   answer that arrived two ticks later was filtered out. That is why enrichment
   only appeared to work when the resolver cache already held the name.
 
+### Verified on this release
+
+- Keyless signature: `cosign verify-blob` reports `Verified OK`
+- Provenance: `gh attestation verify` returns the bundle for the published digest
+- Tamper detection: a one-byte change makes `cosign` report an invalid signature
+  and `gh` return 404 for the digest
+- Updater: a 0.0.9 build fetched 0.1.1, matched the published SHA-256, and staged
+  `tattle.new.exe`, which reports `tattle 0.1.1`
+
 ### Planned for v0.2.0
 
 - Read the browsers' own DNS caches, which would recover hostnames rather than

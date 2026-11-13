@@ -82,6 +82,14 @@ gh attestation verify tattle.exe --repo 0DukePan/tattletale
 The first proves the workflow signed it; the second proves GitHub built it from
 this repository's source.
 
+> cosign v3 prints a deprecation warning for `--signature` and `--certificate`;
+> verification still succeeds and exits 0. The flags are kept because they are
+> the form this release publishes.
+
+Both checks reject a modified binary: flipping a single byte makes `cosign`
+report an invalid signature and makes `gh` return 404 for that digest. That was
+tested, not assumed.
+
 ### Updating
 
 ```powershell

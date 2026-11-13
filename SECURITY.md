@@ -54,7 +54,15 @@ gh attestation verify tattle.exe --repo 0DukePan/tattletale
 ```
 
 What this proves: the file was produced by that workflow, in this repository,
-from the commit the run records. What it does not prove: that the maintainer's
+from the commit the run records.
+
+> cosign v3 prints a deprecation warning for `--signature` and `--certificate`;
+> verification still succeeds and exits 0. The flags are kept because they are
+> the form this release publishes.
+
+Both checks reject a modified binary: flipping a single byte makes `cosign`
+report an invalid signature and makes `gh` return 404 for that digest. That was
+tested, not assumed. What it does not prove: that the maintainer's
 account was not compromised. No signature scheme survives that.
 
 Windows SmartScreen will still warn on first run, because SmartScreen reputation
